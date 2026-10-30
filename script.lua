@@ -1,65 +1,34 @@
 -- ============================================
 --  by #provokator
 --  tg: @EroxEggScript
+--  GitHub: provokator-hub
 -- ============================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
-local KILL_SWITCH_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
+-- === ЗАЩИТА ОТ КРАЖИ (Лицензия) ===
+local _k = "cHJvdm9rYXRvci1odWIvU3Vydml2ZS10aGUtTGF2YS1mb3ItRWdncy0=" -- Base64 от "provokator-hub/Survive-the-Lava-for-Eggs-"
+local _c = HttpService:Base64Decode(_k)
 
--- Функция проверки статуса через request (надежнее, чем HttpGet)
-local function checkStatus()
-    local success, response = pcall(function()
-        -- Пробуем через request, если его нет - через HttpGet
-        if request then
-            local res = request({
-                Url = KILL_SWITCH_URL,
-                Method = "GET"
-            })
-            return res.Body
-        else
-            return game:HttpGet(KILL_SWITCH_URL)
-        end
-    end)
-    
-    if success and response then
-        response = string.upper(string.gsub(response, "%s+", ""))
-        if response == "ON" then
-            return true
-        end
+local success, status = pcall(function()
+    if request then
+        local res = request({ Url = "https://raw.githubusercontent.com/" .. _c .. "/refs/heads/main/status.txt", Method = "GET" })
+        return res.Body
+    else
+        return game:HttpGet("https://raw.githubusercontent.com/" .. _c .. "/refs/heads/main/status.txt")
     end
-    return false
-end
+end)
 
--- ПРОВЕРКА
-if not checkStatus() then
-    local err = Instance.new("ScreenGui")
-    err.Name = "LicenseError"
-    err.Parent = player:WaitForChild("PlayerGui")
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 300, 0, 120)
-    frame.Position = UDim2.new(0.5, -150, 0.5, -60)
-    frame.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-    frame.Parent = err
-
-    local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(1, -20, 1, -20)
-    text.Position = UDim2.new(0, 10, 0, 10)
-    text.BackgroundTransparency = 1
-    text.Text = "❌ ДОСТУП ЗАПРЕЩЕН\nСкрипт отключен владельцем.\n\nПодробнее в ТГ: @EroxEggScript"
-    text.TextColor3 = Color3.fromRGB(255, 255, 255)
-    text.Font = Enum.Font.SourceSansBold
-    text.TextSize = 16
-    text.TextWrapped = true
-    text.Parent = frame
-
+if not success or not string.find(string.upper(status or ""), "ON") then
+    player:Kick("❌ СКРИПТ УКРАДЕН или ОТКЛЮЧЕН!\nОригинал в ТГ: @EroxEggScript")
     return
 end
+-- === КОНЕЦ ЗАЩИТЫ ===
 
 -- === ОСНОВНОЙ КОД ===
 local SNOW_CENTER = Vector3.new(2728, 0, 0) 
