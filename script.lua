@@ -9,33 +9,33 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
 
--- ССЫЛКА НА STATUS.TXT
 local KILL_SWITCH_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
 
--- Функция проверки статуса (через request для обхода блокировок)
+-- Функция проверки статуса
 local function checkStatus()
     local success, response = pcall(function()
         if request then
-            local res = request({
-                Url = KILL_SWITCH_URL,
-                Method = "GET"
-            })
+            local res = request({Url = KILL_SWITCH_URL, Method = "GET"})
             return res.Body
         else
             return game:HttpGet(KILL_SWITCH_URL)
         end
     end)
     
-    if success and response then
-        response = string.upper(string.gsub(response, "%s+", ""))
-        if response == "ON" then
-            return true
-        end
+    -- Если GitHub не отвечает (ошибка), скрипт все равно запускается (Аварийный режим)
+    if not success or not response then
+        warn("⚠️ Ошибка проверки GitHub. Скрипт запущен в аварийном режиме.")
+        return true 
+    end
+    
+    response = string.upper(string.gsub(response, "%s+", ""))
+    if response == "ON" then
+        return true
     end
     return false
 end
 
--- ПРОВЕРКА ДОСТУПА
+-- ПРОВЕРКА
 if not checkStatus() then
     local err = Instance.new("ScreenGui")
     err.Name = "LicenseError"
