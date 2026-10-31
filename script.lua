@@ -76,7 +76,7 @@ screenGui.Name = "ProbokatorMenu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Кнопка скрытия (маленькая, для телефона)
+-- Маленькая кнопка для телефона
 local hideBtn = Instance.new("TextButton")
 hideBtn.Size = UDim2.new(0, 40, 0, 40)
 hideBtn.Position = UDim2.new(0, 10, 0, 10)
@@ -100,20 +100,19 @@ mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
--- ЛОГИКА СКРЫТИЯ (Общая для кнопки P и клавиши K)
+-- Логика скрытия
 local isMenuVisible = true
 local function toggleMenu()
     isMenuVisible = not isMenuVisible
     mainFrame.Visible = isMenuVisible
 end
 
--- Скрытие кнопкой P (телефон)
 hideBtn.MouseButton1Click:Connect(toggleMenu)
 
--- Скрытие клавишей K (ПК)
+-- Слушаем LeftControl для скрытия меню
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.K then
+    if input.KeyCode == Enum.KeyCode.LeftControl then
         toggleMenu()
     end
 end)
@@ -369,7 +368,7 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Фарм (повтор клика)
+-- Фарм
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
