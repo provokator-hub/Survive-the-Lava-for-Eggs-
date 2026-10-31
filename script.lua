@@ -61,19 +61,19 @@ local playerKills = 0
 local KILLS_REQUIRED = 3 
 local TG_TAG = "@EroxEggScript" 
 
--- ФЛАЙ
+-- ФЛАЙ (Скорость по умолчанию 150)
 local isFlying = false
-local flySpeed = 50 -- Скорость по умолчанию
+local flySpeed = 150 
 local flyConnection = nil
 local bodyVelocity = nil
 
--- GUI
+-- GUI (УВЕЛИЧЕНО)
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ProbokatorMenu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Кнопка скрытия (маленькая, всегда на экране)
+-- Кнопка скрытия
 local hideBtn = Instance.new("TextButton")
 hideBtn.Size = UDim2.new(0, 40, 0, 40)
 hideBtn.Position = UDim2.new(0, 10, 0, 10)
@@ -83,13 +83,13 @@ hideBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
 hideBtn.Text = "P"
 hideBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 hideBtn.Font = Enum.Font.SourceSansBold
-hideBtn.TextSize = 18
+hideBtn.TextSize = 20
 hideBtn.Parent = screenGui
 
 -- Основное меню
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 220, 0, 320)
-mainFrame.Position = UDim2.new(0.5, -110, 0.5, -160)
+mainFrame.Size = UDim2.new(0, 260, 0, 380) -- Увеличено
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -190)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -97,7 +97,6 @@ mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
--- Логика скрытия/показа
 local isMenuVisible = true
 hideBtn.MouseButton1Click:Connect(function()
     isMenuVisible = not isMenuVisible
@@ -105,33 +104,33 @@ hideBtn.MouseButton1Click:Connect(function()
 end)
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 25)
+title.Size = UDim2.new(1, 0, 0, 30)
 title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 title.Text = "#provokator"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
-title.TextSize = 12
+title.TextSize = 14
 title.Parent = mainFrame
 
 -- Ссылка ТГ
 local tgBtn = Instance.new("TextButton")
-tgBtn.Size = UDim2.new(1, -10, 0, 20)
-tgBtn.Position = UDim2.new(0, 5, 0, 30)
+tgBtn.Size = UDim2.new(1, -10, 0, 25)
+tgBtn.Position = UDim2.new(0, 5, 0, 35)
 tgBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200) 
-tgBtn.Text = "📢 ТГ"
+tgBtn.Text = "📢 ССЫЛКА ТГ"
 tgBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 tgBtn.Font = Enum.Font.SourceSansBold
-tgBtn.TextSize = 10
+tgBtn.TextSize = 12
 tgBtn.Parent = mainFrame
 
 local tgLinkLabel = Instance.new("TextLabel")
-tgLinkLabel.Size = UDim2.new(1, -10, 0, 15)
-tgLinkLabel.Position = UDim2.new(0, 5, 0, 50)
+tgLinkLabel.Size = UDim2.new(1, -10, 0, 20)
+tgLinkLabel.Position = UDim2.new(0, 5, 0, 60)
 tgLinkLabel.BackgroundTransparency = 1
 tgLinkLabel.Text = "" 
 tgLinkLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
 tgLinkLabel.Font = Enum.Font.SourceSansBold
-tgLinkLabel.TextSize = 10
+tgLinkLabel.TextSize = 12
 tgLinkLabel.Parent = mainFrame
 
 tgBtn.MouseButton1Click:Connect(function()
@@ -140,18 +139,18 @@ end)
 
 -- Инфо
 local infoBtn = Instance.new("TextButton")
-infoBtn.Size = UDim2.new(1, -10, 0, 20)
-infoBtn.Position = UDim2.new(0, 5, 0, 65)
+infoBtn.Size = UDim2.new(1, -10, 0, 25)
+infoBtn.Position = UDim2.new(0, 5, 0, 80)
 infoBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-infoBtn.Text = "ℹ️ Инфо"
+infoBtn.Text = "ℹ️ Информация"
 infoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 infoBtn.Font = Enum.Font.SourceSansBold
-infoBtn.TextSize = 10
+infoBtn.TextSize = 12
 infoBtn.Parent = mainFrame
 
 local infoFrame = Instance.new("Frame")
-infoFrame.Size = UDim2.new(0, 200, 0, 100)
-infoFrame.Position = UDim2.new(0.5, -100, 0.5, -50)
+infoFrame.Size = UDim2.new(0, 220, 0, 110)
+infoFrame.Position = UDim2.new(0.5, -110, 0.5, -55)
 infoFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 infoFrame.BorderSizePixel = 2
 infoFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -165,89 +164,89 @@ infoText.BackgroundTransparency = 1
 infoText.Text = "Фарм работает после 3 убийств тыкв."
 infoText.TextColor3 = Color3.fromRGB(255, 255, 255)
 infoText.Font = Enum.Font.SourceSans
-infoText.TextSize = 11
+infoText.TextSize = 12
 infoText.TextWrapped = true
 infoText.Parent = infoFrame
 
 local closeInfo = Instance.new("TextButton")
-closeInfo.Size = UDim2.new(0, 60, 0, 20)
-closeInfo.Position = UDim2.new(0.5, -30, 1, -25)
+closeInfo.Size = UDim2.new(0, 70, 0, 25)
+closeInfo.Position = UDim2.new(0.5, -35, 1, -30)
 closeInfo.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 closeInfo.Text = "Закрыть"
 closeInfo.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeInfo.Font = Enum.Font.SourceSansBold
-closeInfo.TextSize = 10
+closeInfo.TextSize = 12
 closeInfo.Parent = infoFrame
 closeInfo.MouseButton1Click:Connect(function() infoFrame.Visible = false end)
 infoBtn.MouseButton1Click:Connect(function() infoFrame.Visible = not infoFrame.Visible end)
 
 -- Фарм
 local farmBtn = Instance.new("TextButton")
-farmBtn.Size = UDim2.new(1, -10, 0, 25)
-farmBtn.Position = UDim2.new(0, 5, 0, 90)
+farmBtn.Size = UDim2.new(1, -10, 0, 30)
+farmBtn.Position = UDim2.new(0, 5, 0, 110)
 farmBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 farmBtn.Text = "ФАРМ: ВЫКЛ"
 farmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 farmBtn.Font = Enum.Font.SourceSansBold
-farmBtn.TextSize = 10
+farmBtn.TextSize = 12
 farmBtn.Parent = mainFrame
 
 -- StealSnowZone
 local snowZoneBtn = Instance.new("TextButton")
-snowZoneBtn.Size = UDim2.new(1, -10, 0, 25)
-snowZoneBtn.Position = UDim2.new(0, 5, 0, 120)
+snowZoneBtn.Size = UDim2.new(1, -10, 0, 30)
+snowZoneBtn.Position = UDim2.new(0, 5, 0, 145)
 snowZoneBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
 snowZoneBtn.Text = "StealSnowZone"
 snowZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 snowZoneBtn.Font = Enum.Font.SourceSansBold
-snowZoneBtn.TextSize = 10
+snowZoneBtn.TextSize = 12
 snowZoneBtn.Parent = mainFrame
 
--- ФЛАЙ С ПОДСТРОЙКОЙ
+-- ФЛАЙ
 local flyBtn = Instance.new("TextButton")
-flyBtn.Size = UDim2.new(1, -10, 0, 25)
-flyBtn.Position = UDim2.new(0, 5, 0, 150)
+flyBtn.Size = UDim2.new(1, -10, 0, 30)
+flyBtn.Position = UDim2.new(0, 5, 0, 180)
 flyBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
 flyBtn.Text = "ФЛАЙ: ВЫКЛ"
 flyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 flyBtn.Font = Enum.Font.SourceSansBold
-flyBtn.TextSize = 10
+flyBtn.TextSize = 12
 flyBtn.Parent = mainFrame
 
 -- ПОЛЗУНОК СКОРОСТИ
 local speedSlider = Instance.new("Frame")
-speedSlider.Size = UDim2.new(1, -10, 0, 20)
-speedSlider.Position = UDim2.new(0, 5, 0, 180)
+speedSlider.Size = UDim2.new(1, -10, 0, 25)
+speedSlider.Position = UDim2.new(0, 5, 0, 215)
 speedSlider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 speedSlider.BorderSizePixel = 1
 speedSlider.BorderColor3 = Color3.fromRGB(255, 255, 255)
 speedSlider.Parent = mainFrame
 
 local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+sliderFill.Size = UDim2.new(1, 0, 1, 0) -- Полностью заполнен (так как скорость 150, это максимум для 1-150)
 sliderFill.BackgroundColor3 = Color3.fromRGB(150, 0, 150)
 sliderFill.BorderSizePixel = 0
 sliderFill.Parent = speedSlider
 
 local sliderKnob = Instance.new("TextButton")
-sliderKnob.Size = UDim2.new(0, 10, 0, 20)
-sliderKnob.Position = UDim2.new(0.5, -5, 0, 0)
+sliderKnob.Size = UDim2.new(0, 12, 0, 25)
+sliderKnob.Position = UDim2.new(1, -6, 0, 0)
 sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 sliderKnob.BorderSizePixel = 0
 sliderKnob.Text = ""
 sliderKnob.Parent = speedSlider
 
 local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(1, 0, 0, 15)
-speedLabel.Position = UDim2.new(0, 0, 0, -15)
+speedLabel.Size = UDim2.new(1, 0, 0, 20)
+speedLabel.Position = UDim2.new(0, 0, 0, -20)
 speedLabel.BackgroundTransparency = 1
 speedLabel.Text = "Скорость: " .. flySpeed
 speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 speedLabel.Font = Enum.Font.SourceSans
-speedLabel.TextSize = 10
+speedLabel.TextSize = 12
 speedLabel.Parent = speedSlider
 
--- Логика ползунка
+-- Логика ползунка (1-150)
 local isDragging = false
 sliderKnob.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -264,10 +263,10 @@ UserInputService.InputChanged:Connect(function(input)
         local relativeX = math.clamp(mouseX - barAbsPos, 0, barAbsSize)
         local percent = relativeX / barAbsSize
         
-        sliderKnob.Position = UDim2.new(percent, -5, 0, 0)
+        sliderKnob.Position = UDim2.new(percent, -6, 0, 0)
         sliderFill.Size = UDim2.new(percent, 0, 1, 0)
         
-        flySpeed = math.floor(percent * 100) + 1
+        flySpeed = math.floor(percent * 150) + 1
         speedLabel.Text = "Скорость: " .. flySpeed
     end
 end)
@@ -280,24 +279,24 @@ end)
 
 -- Статус и выгрузка
 local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(1, -10, 0, 20)
-statusText.Position = UDim2.new(0, 5, 0, 210)
+statusText.Size = UDim2.new(1, -10, 0, 25)
+statusText.Position = UDim2.new(0, 5, 0, 250)
 statusText.BackgroundTransparency = 1
 statusText.Text = "Статус: Готов"
 statusText.TextColor3 = Color3.fromRGB(200, 200, 200)
 statusText.Font = Enum.Font.SourceSans
-statusText.TextSize = 9
+statusText.TextSize = 11
 statusText.TextWrapped = true
 statusText.Parent = mainFrame
 
 local unloadBtn = Instance.new("TextButton")
-unloadBtn.Size = UDim2.new(1, -10, 0, 20)
-unloadBtn.Position = UDim2.new(0, 5, 1, -25)
+unloadBtn.Size = UDim2.new(1, -10, 0, 25)
+unloadBtn.Position = UDim2.new(0, 5, 1, -30)
 unloadBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 unloadBtn.Text = "ВЫГРУЗИТЬ"
 unloadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 unloadBtn.Font = Enum.Font.SourceSansBold
-unloadBtn.TextSize = 10
+unloadBtn.TextSize = 12
 unloadBtn.Parent = mainFrame
 
 -- ФЛАЙ ЛОГИКА
@@ -344,7 +343,7 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Остальные функции
+-- Остальные функции (без изменений)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -523,12 +522,12 @@ unloadBtn.MouseButton1Click:Connect(function()
 end)
 
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(1, 0, 0, 15)
-closeBtn.Position = UDim2.new(0, 0, 1, -15)
+closeBtn.Size = UDim2.new(1, 0, 0, 20)
+closeBtn.Position = UDim2.new(0, 0, 1, -20)
 closeBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 closeBtn.Text = "Закрыть"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 9
+closeBtn.TextSize = 10
 closeBtn.Parent = mainFrame
 closeBtn.MouseButton1Click:Connect(function() 
     stopFly()
