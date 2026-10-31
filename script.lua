@@ -11,7 +11,6 @@ local player = Players.LocalPlayer
 
 local KILL_SWITCH_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
 
--- Проверка статуса
 local function checkStatus()
     local success, response = pcall(function()
         if request then
@@ -49,9 +48,13 @@ end
 
 -- === ОСНОВНОЙ КОД ===
 local SNOW_CENTER = Vector3.new(2728, 0, 0) 
+local LAST_CENTER = Vector3.new(3500, 0, 0) -- Призрачная (последняя)
 local SPAWN_CFRAME = CFrame.new(0, 10, 0) 
-local MIN_X = 2200 
-local MAX_X = 3000 
+
+local SNOW_MIN_X = 2200 
+local SNOW_MAX_X = 3000 
+local LAST_MIN_X = 3000 -- Призрачная начинается после Морозной
+local LAST_MAX_X = 6000 
 
 local isFarmEnabled = false
 local isRepeating = false
@@ -61,19 +64,18 @@ local playerKills = 0
 local KILLS_REQUIRED = 3 
 local TG_TAG = "@EroxEggScript" 
 
--- ФЛАЙ (Скорость по умолчанию 150)
+-- ФЛАЙ (Скорость 300)
 local isFlying = false
-local flySpeed = 150 
+local flySpeed = 300 
 local flyConnection = nil
 local bodyVelocity = nil
 
--- GUI (УВЕЛИЧЕНО)
+-- GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ProbokatorMenu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Кнопка скрытия
 local hideBtn = Instance.new("TextButton")
 hideBtn.Size = UDim2.new(0, 40, 0, 40)
 hideBtn.Position = UDim2.new(0, 10, 0, 10)
@@ -86,10 +88,9 @@ hideBtn.Font = Enum.Font.SourceSansBold
 hideBtn.TextSize = 20
 hideBtn.Parent = screenGui
 
--- Основное меню
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 380) -- Увеличено
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -190)
+mainFrame.Size = UDim2.new(0, 260, 0, 430) -- Увеличено для новой кнопки
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -215)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -196,16 +197,27 @@ local snowZoneBtn = Instance.new("TextButton")
 snowZoneBtn.Size = UDim2.new(1, -10, 0, 30)
 snowZoneBtn.Position = UDim2.new(0, 5, 0, 145)
 snowZoneBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
-snowZoneBtn.Text = "StealSnowZone"
+snowZoneBtn.Text = "StealSnowZone (Морозная)"
 snowZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 snowZoneBtn.Font = Enum.Font.SourceSansBold
 snowZoneBtn.TextSize = 12
 snowZoneBtn.Parent = mainFrame
 
+-- StealLastZone (Призрачная)
+local lastZoneBtn = Instance.new("TextButton")
+lastZoneBtn.Size = UDim2.new(1, -10, 0, 30)
+lastZoneBtn.Position = UDim2.new(0, 5, 0, 180)
+lastZoneBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 200)
+lastZoneBtn.Text = "StealLastZone (Призрачная)"
+lastZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+lastZoneBtn.Font = Enum.Font.SourceSansBold
+lastZoneBtn.TextSize = 12
+lastZoneBtn.Parent = mainFrame
+
 -- ФЛАЙ
 local flyBtn = Instance.new("TextButton")
 flyBtn.Size = UDim2.new(1, -10, 0, 30)
-flyBtn.Position = UDim2.new(0, 5, 0, 180)
+flyBtn.Position = UDim2.new(0, 5, 0, 215)
 flyBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
 flyBtn.Text = "ФЛАЙ: ВЫКЛ"
 flyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -216,21 +228,21 @@ flyBtn.Parent = mainFrame
 -- ПОЛЗУНОК СКОРОСТИ
 local speedSlider = Instance.new("Frame")
 speedSlider.Size = UDim2.new(1, -10, 0, 25)
-speedSlider.Position = UDim2.new(0, 5, 0, 215)
+speedSlider.Position = UDim2.new(0, 5, 0, 250)
 speedSlider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 speedSlider.BorderSizePixel = 1
 speedSlider.BorderColor3 = Color3.fromRGB(255, 255, 255)
 speedSlider.Parent = mainFrame
 
 local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new(1, 0, 1, 0) -- Полностью заполнен (так как скорость 150, это максимум для 1-150)
+sliderFill.Size = UDim2.new(0.6, 0, 1, 0) -- Примерно 300 из 500
 sliderFill.BackgroundColor3 = Color3.fromRGB(150, 0, 150)
 sliderFill.BorderSizePixel = 0
 sliderFill.Parent = speedSlider
 
 local sliderKnob = Instance.new("TextButton")
 sliderKnob.Size = UDim2.new(0, 12, 0, 25)
-sliderKnob.Position = UDim2.new(1, -6, 0, 0)
+sliderKnob.Position = UDim2.new(0.6, -6, 0, 0)
 sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 sliderKnob.BorderSizePixel = 0
 sliderKnob.Text = ""
@@ -246,7 +258,7 @@ speedLabel.Font = Enum.Font.SourceSans
 speedLabel.TextSize = 12
 speedLabel.Parent = speedSlider
 
--- Логика ползунка (1-150)
+-- Логика ползунка (1-500)
 local isDragging = false
 sliderKnob.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -266,7 +278,7 @@ UserInputService.InputChanged:Connect(function(input)
         sliderKnob.Position = UDim2.new(percent, -6, 0, 0)
         sliderFill.Size = UDim2.new(percent, 0, 1, 0)
         
-        flySpeed = math.floor(percent * 150) + 1
+        flySpeed = math.floor(percent * 500) + 1
         speedLabel.Text = "Скорость: " .. flySpeed
     end
 end)
@@ -280,7 +292,7 @@ end)
 -- Статус и выгрузка
 local statusText = Instance.new("TextLabel")
 statusText.Size = UDim2.new(1, -10, 0, 25)
-statusText.Position = UDim2.new(0, 5, 0, 250)
+statusText.Position = UDim2.new(0, 5, 0, 285)
 statusText.BackgroundTransparency = 1
 statusText.Text = "Статус: Готов"
 statusText.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -343,7 +355,7 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Остальные функции (без изменений)
+-- Остальные функции
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -415,7 +427,7 @@ local function farmLogic()
         if obj:IsA("Model") and (obj.Name:lower():find("spider") or obj.Name:lower():find("boss")) then
             local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
             if part then
-                if part.Position.X >= MIN_X and part.Position.X <= MAX_X then
+                if part.Position.X >= SNOW_MIN_X and part.Position.X <= LAST_MAX_X then
                     hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 3, 0))
                     return
                 end
@@ -424,12 +436,13 @@ local function farmLogic()
     end
 end
 
-local function StealSnowZone()
+-- УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ВОРОВСТВА
+local function stealEggInZone(zoneCenter, minX, maxX)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
 
-    hrp.CFrame = CFrame.new(SNOW_CENTER + Vector3.new(0, 10, 0))
+    hrp.CFrame = CFrame.new(zoneCenter + Vector3.new(0, 10, 0))
     task.wait(0.2)
 
     local biggestEgg = nil
@@ -451,7 +464,7 @@ local function StealSnowZone()
                 elseif obj:IsA("Model") then part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart") end
                 if part then
                     local posX = part.Position.X
-                    if posX >= MIN_X and posX <= MAX_X then
+                    if posX >= minX and posX <= maxX then
                         local size = part.Size
                         local volume = size.X * size.Y * size.Z
                         if volume > maxVolume then
@@ -482,7 +495,7 @@ local function StealSnowZone()
         hrp.CFrame = SPAWN_CFRAME
         statusText.Text = "Украли!"
     else
-        statusText.Text = "В Снегу пусто."
+        statusText.Text = "В зоне пусто."
     end
 end
 
@@ -509,8 +522,13 @@ farmBtn.MouseButton1Click:Connect(function()
 end)
 
 snowZoneBtn.MouseButton1Click:Connect(function()
-    statusText.Text = "Ищем Дивайн..."
-    StealSnowZone()
+    statusText.Text = "Ищем в Морозной..."
+    stealEggInZone(SNOW_CENTER, SNOW_MIN_X, SNOW_MAX_X)
+end)
+
+lastZoneBtn.MouseButton1Click:Connect(function()
+    statusText.Text = "Ищем в Призрачной..."
+    stealEggInZone(LAST_CENTER, LAST_MIN_X, LAST_MAX_X)
 end)
 
 unloadBtn.MouseButton1Click:Connect(function()
