@@ -48,12 +48,12 @@ end
 
 -- === ОСНОВНОЙ КОД ===
 local SNOW_CENTER = Vector3.new(2728, 0, 0) 
-local LAST_CENTER = Vector3.new(3500, 0, 0) -- Призрачная (последняя)
+local LAST_CENTER = Vector3.new(3500, 0, 0) 
 local SPAWN_CFRAME = CFrame.new(0, 10, 0) 
 
 local SNOW_MIN_X = 2200 
 local SNOW_MAX_X = 3000 
-local LAST_MIN_X = 3000 -- Призрачная начинается после Морозной
+local LAST_MIN_X = 3000 
 local LAST_MAX_X = 6000 
 
 local isFarmEnabled = false
@@ -64,7 +64,7 @@ local playerKills = 0
 local KILLS_REQUIRED = 3 
 local TG_TAG = "@EroxEggScript" 
 
--- ФЛАЙ (Скорость 300)
+-- ФЛАЙ
 local isFlying = false
 local flySpeed = 300 
 local flyConnection = nil
@@ -76,6 +76,7 @@ screenGui.Name = "ProbokatorMenu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
+-- Кнопка скрытия (маленькая, для телефона)
 local hideBtn = Instance.new("TextButton")
 hideBtn.Size = UDim2.new(0, 40, 0, 40)
 hideBtn.Position = UDim2.new(0, 10, 0, 10)
@@ -88,8 +89,9 @@ hideBtn.Font = Enum.Font.SourceSansBold
 hideBtn.TextSize = 20
 hideBtn.Parent = screenGui
 
+-- Основное меню
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 430) -- Увеличено для новой кнопки
+mainFrame.Size = UDim2.new(0, 260, 0, 430) 
 mainFrame.Position = UDim2.new(0.5, -130, 0.5, -215)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 2
@@ -98,10 +100,22 @@ mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
+-- ЛОГИКА СКРЫТИЯ (Общая для кнопки P и клавиши K)
 local isMenuVisible = true
-hideBtn.MouseButton1Click:Connect(function()
+local function toggleMenu()
     isMenuVisible = not isMenuVisible
     mainFrame.Visible = isMenuVisible
+end
+
+-- Скрытие кнопкой P (телефон)
+hideBtn.MouseButton1Click:Connect(toggleMenu)
+
+-- Скрытие клавишей K (ПК)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.K then
+        toggleMenu()
+    end
 end)
 
 local title = Instance.new("TextLabel")
@@ -203,7 +217,7 @@ snowZoneBtn.Font = Enum.Font.SourceSansBold
 snowZoneBtn.TextSize = 12
 snowZoneBtn.Parent = mainFrame
 
--- StealLastZone (Призрачная)
+-- StealLastZone
 local lastZoneBtn = Instance.new("TextButton")
 lastZoneBtn.Size = UDim2.new(1, -10, 0, 30)
 lastZoneBtn.Position = UDim2.new(0, 5, 0, 180)
@@ -235,7 +249,7 @@ speedSlider.BorderColor3 = Color3.fromRGB(255, 255, 255)
 speedSlider.Parent = mainFrame
 
 local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new(0.6, 0, 1, 0) -- Примерно 300 из 500
+sliderFill.Size = UDim2.new(0.6, 0, 1, 0) 
 sliderFill.BackgroundColor3 = Color3.fromRGB(150, 0, 150)
 sliderFill.BorderSizePixel = 0
 sliderFill.Parent = speedSlider
@@ -258,7 +272,7 @@ speedLabel.Font = Enum.Font.SourceSans
 speedLabel.TextSize = 12
 speedLabel.Parent = speedSlider
 
--- Логика ползунка (1-500)
+-- Логика ползунка
 local isDragging = false
 sliderKnob.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -355,7 +369,7 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Остальные функции
+-- Фарм (повтор клика)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -436,7 +450,6 @@ local function farmLogic()
     end
 end
 
--- УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ВОРОВСТВА
 local function stealEggInZone(zoneCenter, minX, maxX)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
