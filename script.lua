@@ -47,11 +47,24 @@ if not checkStatus() then
 end
 
 -- === ОСНОВНОЙ КОД ===
+-- КООРДИНАТЫ ЗОН
+local VOLCANO_CENTER = Vector3.new(673, 0, 0)
+local VOLCANO_MIN_X, VOLCANO_MAX_X = 500, 800
+
+local COSMIC_CENTER = Vector3.new(947, 0, 0)
+local COSMIC_MIN_X, COSMIC_MAX_X = 800, 1100
+
 local SNOW_CENTER = Vector3.new(2728, 0, 0) 
-local LAST_CENTER = Vector3.new(3500, 0, 0) 
+local SNOW_MIN_X, SNOW_MAX_X = 2500, 3000 
+
+local LAST_CENTER = Vector3.new(3603, 0, 0) 
+local LAST_MIN_X, LAST_MAX_X = 3400, 4000 
+
+-- ДЕМОНИЧЕСКАЯ ЗОНА
+local DEMONIC_CENTER = Vector3.new(4275, 0, -26)
+local DEMONIC_MIN_X, DEMONIC_MAX_X = 4000, 4600 
+
 local SPAWN_CFRAME = CFrame.new(0, 10, 0) 
-local SNOW_MIN_X, SNOW_MAX_X = 2200, 3000 
-local LAST_MIN_X, LAST_MAX_X = 3000, 6000 
 
 local isFarmEnabled = false
 local isRepeating = false
@@ -66,6 +79,12 @@ local followTarget = nil
 local isFollowing = false
 local followConnection = nil
 local isGhostMode = false
+
+-- ФЛАЙ
+local isFlying = false
+local flySpeed = 300 
+local flyConnection = nil
+local bodyVelocity = nil
 
 -- GUI
 local screenGui = Instance.new("ScreenGui")
@@ -86,8 +105,8 @@ hideBtn.TextSize = 20
 hideBtn.Parent = screenGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 450)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -225)
+mainFrame.Size = UDim2.new(0, 260, 0, 580) 
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -290)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -159,7 +178,7 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -30)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "Слежка + Инвиз.\nSteal зоны собирают по 2 яйца (с паузой)."
+infoText.Text = "Слежка + Инвиз.\nSteal зоны по 2 яйца.\nФлай: 300 скорость."
 infoText.TextColor3 = Color3.fromRGB(255, 255, 255)
 infoText.Font = Enum.Font.SourceSans
 infoText.TextSize = 12
@@ -177,9 +196,20 @@ closeInfo.Parent = infoFrame
 closeInfo.MouseButton1Click:Connect(function() infoFrame.Visible = false end)
 infoBtn.MouseButton1Click:Connect(function() infoFrame.Visible = not infoFrame.Visible end)
 
+-- ФЛАЙ (ДОБАВЛЕН)
+local flyBtn = Instance.new("TextButton")
+flyBtn.Size = UDim2.new(1, -10, 0, 30)
+flyBtn.Position = UDim2.new(0, 5, 0, 110)
+flyBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+flyBtn.Text = "ФЛАЙ (БЫСТРЫЙ): ВЫКЛ"
+flyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+flyBtn.Font = Enum.Font.SourceSansBold
+flyBtn.TextSize = 12
+flyBtn.Parent = mainFrame
+
 local farmBtn = Instance.new("TextButton")
 farmBtn.Size = UDim2.new(1, -10, 0, 30)
-farmBtn.Position = UDim2.new(0, 5, 0, 110)
+farmBtn.Position = UDim2.new(0, 5, 0, 145)
 farmBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 farmBtn.Text = "ФАРМ: ВЫКЛ"
 farmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -187,9 +217,30 @@ farmBtn.Font = Enum.Font.SourceSansBold
 farmBtn.TextSize = 12
 farmBtn.Parent = mainFrame
 
+-- КНОПКИ ЗОН
+local volcanoBtn = Instance.new("TextButton")
+volcanoBtn.Size = UDim2.new(1, -10, 0, 30)
+volcanoBtn.Position = UDim2.new(0, 5, 0, 180)
+volcanoBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 0)
+volcanoBtn.Text = "StealVolcanoZone (2 яйца)"
+volcanoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+volcanoBtn.Font = Enum.Font.SourceSansBold
+volcanoBtn.TextSize = 12
+volcanoBtn.Parent = mainFrame
+
+local cosmicBtn = Instance.new("TextButton")
+cosmicBtn.Size = UDim2.new(1, -10, 0, 30)
+cosmicBtn.Position = UDim2.new(0, 5, 0, 215)
+cosmicBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 150)
+cosmicBtn.Text = "StealCosmicZone (2 яйца)"
+cosmicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+cosmicBtn.Font = Enum.Font.SourceSansBold
+cosmicBtn.TextSize = 12
+cosmicBtn.Parent = mainFrame
+
 local snowZoneBtn = Instance.new("TextButton")
 snowZoneBtn.Size = UDim2.new(1, -10, 0, 30)
-snowZoneBtn.Position = UDim2.new(0, 5, 0, 145)
+snowZoneBtn.Position = UDim2.new(0, 5, 0, 250)
 snowZoneBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
 snowZoneBtn.Text = "StealSnowZone (2 яйца)"
 snowZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -199,7 +250,7 @@ snowZoneBtn.Parent = mainFrame
 
 local lastZoneBtn = Instance.new("TextButton")
 lastZoneBtn.Size = UDim2.new(1, -10, 0, 30)
-lastZoneBtn.Position = UDim2.new(0, 5, 0, 180)
+lastZoneBtn.Position = UDim2.new(0, 5, 0, 285)
 lastZoneBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 200)
 lastZoneBtn.Text = "StealLastZone (2 яйца)"
 lastZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -207,9 +258,19 @@ lastZoneBtn.Font = Enum.Font.SourceSansBold
 lastZoneBtn.TextSize = 12
 lastZoneBtn.Parent = mainFrame
 
+local demonicBtn = Instance.new("TextButton")
+demonicBtn.Size = UDim2.new(1, -10, 0, 30)
+demonicBtn.Position = UDim2.new(0, 5, 0, 320)
+demonicBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+demonicBtn.Text = "StealDemonicZone (2 яйца)"
+demonicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+demonicBtn.Font = Enum.Font.SourceSansBold
+demonicBtn.TextSize = 12
+demonicBtn.Parent = mainFrame
+
 local selectTargetBtn = Instance.new("TextButton")
 selectTargetBtn.Size = UDim2.new(1, -10, 0, 30)
-selectTargetBtn.Position = UDim2.new(0, 5, 0, 215)
+selectTargetBtn.Position = UDim2.new(0, 5, 0, 355)
 selectTargetBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 50)
 selectTargetBtn.Text = "Выбрать цель"
 selectTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -219,7 +280,7 @@ selectTargetBtn.Parent = mainFrame
 
 local followBtn = Instance.new("TextButton")
 followBtn.Size = UDim2.new(1, -10, 0, 30)
-followBtn.Position = UDim2.new(0, 5, 0, 250)
+followBtn.Position = UDim2.new(0, 5, 0, 390)
 followBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
 followBtn.Text = "Следить + Инвиз: ВЫКЛ"
 followBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -229,7 +290,7 @@ followBtn.Parent = mainFrame
 
 local statusText = Instance.new("TextLabel")
 statusText.Size = UDim2.new(1, -10, 0, 25)
-statusText.Position = UDim2.new(0, 5, 0, 285)
+statusText.Position = UDim2.new(0, 5, 0, 425)
 statusText.BackgroundTransparency = 1
 statusText.Text = "Цель: не выбрана"
 statusText.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -248,12 +309,52 @@ unloadBtn.Font = Enum.Font.SourceSansBold
 unloadBtn.TextSize = 12
 unloadBtn.Parent = mainFrame
 
+-- ЛОГИКА ФЛАЯ
+local function stopFly()
+    if flyConnection then flyConnection:Disconnect() end
+    if bodyVelocity then bodyVelocity:Destroy() end
+    isFlying = false
+    flyBtn.Text = "ФЛАЙ (БЫСТРЫЙ): ВЫКЛ"
+    flyBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
+end
+
+flyBtn.MouseButton1Click:Connect(function()
+    isFlying = not isFlying
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    if isFlying then
+        flyBtn.Text = "ФЛАЙ (БЫСТРЫЙ): ВКЛ"
+        flyBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = hrp
+        flyConnection = RunService.RenderStepped:Connect(function()
+            local camera = workspace.CurrentCamera
+            local moveDir = Vector3.new()
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir += Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir -= Vector3.new(0, 1, 0) end
+            if moveDir.Magnitude > 0 then
+                bodyVelocity.Velocity = moveDir.Unit * flySpeed
+            else
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            end
+        end)
+    else
+        stopFly()
+    end
+end)
+
 -- ЛОГИКА ИНВИЗА
 local function enableGhostMode()
     isGhostMode = true
     local char = player.Character
     if not char then return end
-    
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.Transparency = 0.7
@@ -266,7 +367,6 @@ local function disableGhostMode()
     isGhostMode = false
     local char = player.Character
     if not char then return end
-    
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.Transparency = 0
@@ -287,7 +387,6 @@ end
 selectTargetBtn.MouseButton1Click:Connect(function()
     local listGui = Instance.new("ScreenGui")
     listGui.Parent = player:WaitForChild("PlayerGui")
-    
     local listFrame = Instance.new("ScrollingFrame")
     listFrame.Size = UDim2.new(0, 200, 0, 200)
     listFrame.Position = UDim2.new(0.5, -100, 0.5, -100)
@@ -296,10 +395,8 @@ selectTargetBtn.MouseButton1Click:Connect(function()
     listFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
     listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     listFrame.Parent = listGui
-    
     local listLayout = Instance.new("UIListLayout")
     listLayout.Parent = listFrame
-    
     local count = 0
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= player then
@@ -313,7 +410,6 @@ selectTargetBtn.MouseButton1Click:Connect(function()
             btn.Font = Enum.Font.SourceSans
             btn.TextSize = 12
             btn.Parent = listFrame
-            
             btn.MouseButton1Click:Connect(function()
                 followTarget = plr
                 statusText.Text = "Цель: " .. plr.Name
@@ -330,19 +426,15 @@ followBtn.MouseButton1Click:Connect(function()
         statusText.Text = "Сначала выбери цель!"
         return
     end
-    
     isFollowing = not isFollowing
     if isFollowing then
         followBtn.Text = "Следить + Инвиз: ВКЛ"
         followBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-        
         enableGhostMode()
-        
         followConnection = RunService.Heartbeat:Connect(function()
             if not isFollowing or not followTarget then return end
             local char = player.Character
             local targetChar = followTarget.Character
-            
             if char and char:FindFirstChild("HumanoidRootPart") and targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
                 local hum = targetChar:FindFirstChild("Humanoid")
                 if hum and hum.Health > 0 then
@@ -433,7 +525,7 @@ local function farmLogic()
     end
 end
 
--- ВОРОВСТВО 2 ЯИЦ (С ПАУЗОЙ ДЛЯ ПОДБОРА)
+-- ВОРОВСТВО 2 ЯИЦ
 local function stealTwoEggsInZone(zoneCenter, minX, maxX)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -468,22 +560,15 @@ local function stealTwoEggsInZone(zoneCenter, minX, maxX)
     for i, eggData in ipairs(eggsToSteal) do
         statusText.Text = "Берем яйцо " .. i
         hrp.CFrame = CFrame.new(eggData.part.Position + Vector3.new(0, 3, 0))
-        
-        -- ДАЕМ ИГРЕ ВРЕМЯ (0.3 сек), ЧТОБЫ ЗАСЧИТАТЬ ПОДБОР
         task.wait(0.3) 
-
         pcall(function() fireproximityprompt(eggData.prompt) end)
         pcall(function() firetouchinterest(hrp, eggData.part, 0); firetouchinterest(hrp, eggData.part, 1) end)
-        
-        -- Спам E (5 раз для надежности)
         for j = 1, 5 do
             VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
             task.wait(0.03)
             VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
             task.wait(0.03)
         end
-        
-        -- Пауза после подбора
         task.wait(0.2)
     end
 
@@ -513,13 +598,17 @@ farmBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+volcanoBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Вулкане..." stealTwoEggsInZone(VOLCANO_CENTER, VOLCANO_MIN_X, VOLCANO_MAX_X) end)
+cosmicBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Космосе..." stealTwoEggsInZone(COSMIC_CENTER, COSMIC_MIN_X, COSMIC_MAX_X) end)
 snowZoneBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Морозной..." stealTwoEggsInZone(SNOW_CENTER, SNOW_MIN_X, SNOW_MAX_X) end)
 lastZoneBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Призрачной..." stealTwoEggsInZone(LAST_CENTER, LAST_MIN_X, LAST_MAX_X) end)
+demonicBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Демонической..." stealTwoEggsInZone(DEMONIC_CENTER, DEMONIC_MIN_X, DEMONIC_MAX_X) end)
 
 unloadBtn.MouseButton1Click:Connect(function()
     isFarmEnabled = false
     isRepeating = false
     stopFollowing()
+    stopFly()
     screenGui:Destroy()
     print("[#provokator] Скрипт выгружен.")
 end)
@@ -534,5 +623,6 @@ closeBtn.TextSize = 10
 closeBtn.Parent = mainFrame
 closeBtn.MouseButton1Click:Connect(function() 
     stopFollowing()
+    stopFly()
     screenGui:Destroy() 
 end)
