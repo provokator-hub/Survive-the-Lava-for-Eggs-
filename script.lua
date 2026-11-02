@@ -159,7 +159,7 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -30)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "Слежка + Инвиз: ты не получаешь урон от игроков, но бьешь их касанием."
+infoText.Text = "Слежка + Инвиз.\nSteal зоны собирают по 2 яйца (с паузой)."
 infoText.TextColor3 = Color3.fromRGB(255, 255, 255)
 infoText.Font = Enum.Font.SourceSans
 infoText.TextSize = 12
@@ -191,7 +191,7 @@ local snowZoneBtn = Instance.new("TextButton")
 snowZoneBtn.Size = UDim2.new(1, -10, 0, 30)
 snowZoneBtn.Position = UDim2.new(0, 5, 0, 145)
 snowZoneBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
-snowZoneBtn.Text = "StealSnowZone (Морозная)"
+snowZoneBtn.Text = "StealSnowZone (2 яйца)"
 snowZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 snowZoneBtn.Font = Enum.Font.SourceSansBold
 snowZoneBtn.TextSize = 12
@@ -201,7 +201,7 @@ local lastZoneBtn = Instance.new("TextButton")
 lastZoneBtn.Size = UDim2.new(1, -10, 0, 30)
 lastZoneBtn.Position = UDim2.new(0, 5, 0, 180)
 lastZoneBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 200)
-lastZoneBtn.Text = "StealLastZone (Призрачная)"
+lastZoneBtn.Text = "StealLastZone (2 яйца)"
 lastZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 lastZoneBtn.Font = Enum.Font.SourceSansBold
 lastZoneBtn.TextSize = 12
@@ -254,11 +254,10 @@ local function enableGhostMode()
     local char = player.Character
     if not char then return end
     
-    -- Делаем все части полупрозрачными и отключаем коллизию
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.Transparency = 0.7 -- Полупрозрачный
-            part.CanCollide = false -- Отключаем столкновения (урон от касания)
+            part.Transparency = 0.7
+            part.CanCollide = false
         end
     end
 end
@@ -268,7 +267,6 @@ local function disableGhostMode()
     local char = player.Character
     if not char then return end
     
-    -- Возвращаем нормальный вид
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.Transparency = 0
@@ -338,7 +336,7 @@ followBtn.MouseButton1Click:Connect(function()
         followBtn.Text = "Следить + Инвиз: ВКЛ"
         followBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
         
-        enableGhostMode() -- ВКЛЮЧАЕМ ИНВИЗ
+        enableGhostMode()
         
         followConnection = RunService.Heartbeat:Connect(function()
             if not isFollowing or not followTarget then return end
@@ -348,15 +346,11 @@ followBtn.MouseButton1Click:Connect(function()
             if char and char:FindFirstChild("HumanoidRootPart") and targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
                 local hum = targetChar:FindFirstChild("Humanoid")
                 if hum and hum.Health > 0 then
-                    -- 1. Телепорт к цели
                     char.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-                    
-                    -- 2. Физический удар (ты бьешь его, он тебя нет из-за Ghost Mode)
                     pcall(function()
                         firetouchinterest(char.HumanoidRootPart, targetChar.HumanoidRootPart, 0)
                         firetouchinterest(char.HumanoidRootPart, targetChar.HumanoidRootPart, 1)
                     end)
-                    
                 else
                     statusText.Text = "Цель мертва."
                     stopFollowing()
@@ -439,52 +433,62 @@ local function farmLogic()
     end
 end
 
-local function stealEggInZone(zoneCenter, minX, maxX)
+-- ВОРОВСТВО 2 ЯИЦ (С ПАУЗОЙ ДЛЯ ПОДБОРА)
+local function stealTwoEggsInZone(zoneCenter, minX, maxX)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
-    hrp.CFrame = CFrame.new(zoneCenter + Vector3.new(0, 10, 0))
-    task.wait(0.2)
-    local biggestEgg, maxVolume, targetPart, targetPrompt = nil, 0, nil, nil
+
+    statusText.Text = "Ищем яйца..."
+    
+    local eggsInZone = {}
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj.Name == "Egg" and (obj:IsA("Part") or obj:IsA("Model")) then
             local prompt = obj:FindFirstChild("StealPrompt") or obj:FindFirstChildOfClass("ProximityPrompt")
-            if not prompt then
-                for _, child in pairs(obj:GetDescendants()) do
-                    if child:IsA("ProximityPrompt") then prompt = child break end
-                end
-            end
             if prompt then
                 local part = obj:IsA("Part") and obj or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
                 if part and part.Position.X >= minX and part.Position.X <= maxX then
-                    local size = part.Size
-                    local volume = size.X * size.Y * size.Z
-                    if volume > maxVolume then
-                        maxVolume = volume
-                        biggestEgg = obj
-                        targetPart = part
-                        targetPrompt = prompt
-                    end
+                    table.insert(eggsInZone, {obj = obj, part = part, prompt = prompt})
                 end
             end
         end
     end
-    if targetPart and targetPrompt then
-        hrp.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 3, 0))
-        task.wait(0.2)
-        for i = 1, 15 do
-            if not targetPart or not targetPart.Parent then break end
-            pcall(function() fireproximityprompt(targetPrompt) end)
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-            task.wait(0.05)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-            task.wait(0.05)
-        end
-        hrp.CFrame = SPAWN_CFRAME
-        statusText.Text = "Украли!"
-    else
+
+    if #eggsInZone == 0 then
         statusText.Text = "В зоне пусто."
+        return
     end
+
+    local eggsToSteal = {}
+    table.insert(eggsToSteal, eggsInZone[1])
+    if #eggsInZone >= 2 then
+        table.insert(eggsToSteal, eggsInZone[2])
+    end
+
+    for i, eggData in ipairs(eggsToSteal) do
+        statusText.Text = "Берем яйцо " .. i
+        hrp.CFrame = CFrame.new(eggData.part.Position + Vector3.new(0, 3, 0))
+        
+        -- ДАЕМ ИГРЕ ВРЕМЯ (0.3 сек), ЧТОБЫ ЗАСЧИТАТЬ ПОДБОР
+        task.wait(0.3) 
+
+        pcall(function() fireproximityprompt(eggData.prompt) end)
+        pcall(function() firetouchinterest(hrp, eggData.part, 0); firetouchinterest(hrp, eggData.part, 1) end)
+        
+        -- Спам E (5 раз для надежности)
+        for j = 1, 5 do
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+            task.wait(0.03)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            task.wait(0.03)
+        end
+        
+        -- Пауза после подбора
+        task.wait(0.2)
+    end
+
+    hrp.CFrame = SPAWN_CFRAME
+    statusText.Text = "Собрали " .. #eggsToSteal .. " яиц!"
 end
 
 RunService.Heartbeat:Connect(function()
@@ -509,8 +513,8 @@ farmBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-snowZoneBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Морозной..." stealEggInZone(SNOW_CENTER, SNOW_MIN_X, SNOW_MAX_X) end)
-lastZoneBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Призрачной..." stealEggInZone(LAST_CENTER, LAST_MIN_X, LAST_MAX_X) end)
+snowZoneBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Морозной..." stealTwoEggsInZone(SNOW_CENTER, SNOW_MIN_X, SNOW_MAX_X) end)
+lastZoneBtn.MouseButton1Click:Connect(function() statusText.Text = "Ищем в Призрачной..." stealTwoEggsInZone(LAST_CENTER, LAST_MIN_X, LAST_MAX_X) end)
 
 unloadBtn.MouseButton1Click:Connect(function()
     isFarmEnabled = false
