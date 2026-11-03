@@ -178,7 +178,7 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -30)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "Слежка + Инвиз.\nSteal зоны по 2 яйца.\nФлай: 300 скорость."
+infoText.Text = "Слежка + Инвиз.\nSteal зоны по 3 яйца.\nФлай: 300 скорость."
 infoText.TextColor3 = Color3.fromRGB(255, 255, 255)
 infoText.Font = Enum.Font.SourceSans
 infoText.TextSize = 12
@@ -196,7 +196,7 @@ closeInfo.Parent = infoFrame
 closeInfo.MouseButton1Click:Connect(function() infoFrame.Visible = false end)
 infoBtn.MouseButton1Click:Connect(function() infoFrame.Visible = not infoFrame.Visible end)
 
--- ФЛАЙ (ДОБАВЛЕН)
+-- ФЛАЙ
 local flyBtn = Instance.new("TextButton")
 flyBtn.Size = UDim2.new(1, -10, 0, 30)
 flyBtn.Position = UDim2.new(0, 5, 0, 110)
@@ -222,7 +222,7 @@ local volcanoBtn = Instance.new("TextButton")
 volcanoBtn.Size = UDim2.new(1, -10, 0, 30)
 volcanoBtn.Position = UDim2.new(0, 5, 0, 180)
 volcanoBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 0)
-volcanoBtn.Text = "StealVolcanoZone (2 яйца)"
+volcanoBtn.Text = "StealVolcanoZone (3 яйца)"
 volcanoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 volcanoBtn.Font = Enum.Font.SourceSansBold
 volcanoBtn.TextSize = 12
@@ -232,7 +232,7 @@ local cosmicBtn = Instance.new("TextButton")
 cosmicBtn.Size = UDim2.new(1, -10, 0, 30)
 cosmicBtn.Position = UDim2.new(0, 5, 0, 215)
 cosmicBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 150)
-cosmicBtn.Text = "StealCosmicZone (2 яйца)"
+cosmicBtn.Text = "StealCosmicZone (3 яйца)"
 cosmicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 cosmicBtn.Font = Enum.Font.SourceSansBold
 cosmicBtn.TextSize = 12
@@ -242,7 +242,7 @@ local snowZoneBtn = Instance.new("TextButton")
 snowZoneBtn.Size = UDim2.new(1, -10, 0, 30)
 snowZoneBtn.Position = UDim2.new(0, 5, 0, 250)
 snowZoneBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
-snowZoneBtn.Text = "StealSnowZone (2 яйца)"
+snowZoneBtn.Text = "StealSnowZone (3 яйца)"
 snowZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 snowZoneBtn.Font = Enum.Font.SourceSansBold
 snowZoneBtn.TextSize = 12
@@ -252,7 +252,7 @@ local lastZoneBtn = Instance.new("TextButton")
 lastZoneBtn.Size = UDim2.new(1, -10, 0, 30)
 lastZoneBtn.Position = UDim2.new(0, 5, 0, 285)
 lastZoneBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 200)
-lastZoneBtn.Text = "StealLastZone (2 яйца)"
+lastZoneBtn.Text = "StealLastZone (3 яйца)"
 lastZoneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 lastZoneBtn.Font = Enum.Font.SourceSansBold
 lastZoneBtn.TextSize = 12
@@ -262,7 +262,7 @@ local demonicBtn = Instance.new("TextButton")
 demonicBtn.Size = UDim2.new(1, -10, 0, 30)
 demonicBtn.Position = UDim2.new(0, 5, 0, 320)
 demonicBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-demonicBtn.Text = "StealDemonicZone (2 яйца)"
+demonicBtn.Text = "StealDemonicZone (3 яйца)"
 demonicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 demonicBtn.Font = Enum.Font.SourceSansBold
 demonicBtn.TextSize = 12
@@ -525,7 +525,7 @@ local function farmLogic()
     end
 end
 
--- ВОРОВСТВО 2 ЯИЦ
+-- ВОРОВСТВО 3 ЯИЦ
 local function stealTwoEggsInZone(zoneCenter, minX, maxX)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -555,6 +555,9 @@ local function stealTwoEggsInZone(zoneCenter, minX, maxX)
     table.insert(eggsToSteal, eggsInZone[1])
     if #eggsInZone >= 2 then
         table.insert(eggsToSteal, eggsInZone[2])
+    end
+    if #eggsInZone >= 3 then
+        table.insert(eggsToSteal, eggsInZone[3])
     end
 
     for i, eggData in ipairs(eggsToSteal) do
