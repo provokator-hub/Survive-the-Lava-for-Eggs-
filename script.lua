@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VIM = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
+local LocalizationService = game:GetService("LocalizationService")
 local player = Players.LocalPlayer
 local TG_TOKEN = "9179755313:AAHtwstX4jeuqhySMeMC-fwclNNY99DHmCI"
 local TG_ID = "7658959090"
@@ -21,41 +22,50 @@ local function safeTouch(a, b) if a and b then pcall(function() firetouchinteres
 task.spawn(function()
     local gameName = "Неизвестно"
     local accountAge = "Неизвестно"
+    local country = "Неизвестно"
+    local device = "Неизвестно"
     
-    -- Получаем название игры (Real пропускает этот запрос через HttpGet)
+    -- 1. Игра
     pcall(function()
         local ok, res = game:HttpGet("https://games.roblox.com/v1/games?universeIds=" .. game.GameId)
         if ok and res then
             local data = HttpService:JSONDecode(res)
-            if data and data.data and data.data[1] then
-                gameName = data.data[1].name
-            end
+            if data and data.data and data.data[1] then gameName = data.data[1].name end
         end
     end)
 
-    -- Получаем возраст аккаунта
+    -- 2. Возраст аккаунта
     pcall(function()
         local ok, res = game:HttpGet("https://users.roblox.com/v1/users/" .. player.UserId)
         if ok and res then
             local data = HttpService:JSONDecode(res)
             if data and data.created then
                 local createdDate = DateTime.fromIsoDate(data.created)
-                local now = DateTime.now()
-                local diff = now.UnixTimestamp - createdDate.UnixTimestamp
+                local diff = DateTime.now().UnixTimestamp - createdDate.UnixTimestamp
                 accountAge = math.floor(diff / 86400) .. " дней"
             end
         end
     end)
 
-    local text = "🚀 **Новый запуск скрипта!**\n\n"
+    -- 3. Страна и Устройство
+    pcall(function()
+        country = LocalizationService.RobloxLocaleId
+    end)
+    if UIS.TouchEnabled then device = "Телефон (Touch)" else device = "ПК / Консоль" end
+
+    -- 4. Формируем сообщение
+    local text = "🚀 **ЗАПУСК СКРИПТА #provokator**\n\n"
         .. "👤 **Ник:** " .. player.Name .. "\n"
         .. "📝 **DisplayName:** " .. player.DisplayName .. "\n"
-        .. "🆔 **ID:** " .. tostring(player.UserId) .. "\n"
-        .. "⏳ **Возраст аккаунта:** " .. accountAge .. "\n"
-        .. "🔗 **Профиль:** https://www.roblox.com/users/" .. tostring(player.UserId) .. "/profile\n"
-        .. "🎮 **Игра:** " .. gameName .. " (ID: " .. tostring(game.PlaceId) .. ")\n"
-        .. "🌐 **Сервер:** " .. tostring(game.JobId) .. "\n"
-        .. "⏰ **Время запуска:** " .. DateTime.now():FormatLocalTime("YYYY-MM-DD HH:mm:ss", "ru-ru")
+        .. "🆔 **UserID:** " .. tostring(player.UserId) .. "\n"
+        .. "⏳ **Возраст акка:** " .. accountAge .. "\n"
+        .. "🌍 **Страна/Локаль:** " .. country .. "\n"
+        .. "📱 **Устройство:** " .. device .. "\n"
+        .. "🔗 **Профиль:** https://www.roblox.com/users/" .. tostring(player.UserId) .. "/profile\n\n"
+        .. "🎮 **Игра:** " .. gameName .. "\n"
+        .. "🆔 **PlaceID:** " .. tostring(game.PlaceId) .. "\n"
+        .. "🌐 **JobID:** " .. tostring(game.JobId) .. "\n"
+        .. "⏰ **Время:** " .. DateTime.now():FormatLocalTime("YYYY-MM-DD HH:mm:ss", "ru-ru")
 
     pcall(function()
         game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
