@@ -1,9 +1,16 @@
+    -- ============================================================
+-- [Rock Активация] #provokator — ПОЛНАЯ ВЕРСИЯ ДЛЯ SOLARA V3
+-- Создано командой "Rocket Way"
+-- Все функции сохранены, интерфейс на русском
+-- ============================================================
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
 
+-- ================== КОНФИГ ==================
 local VOLCANO_MIN_X, VOLCANO_MAX_X = 500, 800
 local COSMIC_MIN_X, COSMIC_MAX_X = 800, 1100
 local SNOW_MIN_X, SNOW_MAX_X = 2500, 3000
@@ -18,6 +25,7 @@ local followTarget, isFollowing, followConnection = nil, false, nil
 local isFarmEnabled, isRepeating, lastFarmTime, lastClickTime, playerKills = false, false, 0, 0, 0
 local KILLS_REQUIRED = 3
 
+-- ================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==================
 local function cleanName(name)
     name = name:gsub("Hatch", ""):gsub("Egg", ""):gsub("Part", ""):gsub("_", " ")
     return name:gsub("^%s*(.-)%s*$", "%1")
@@ -29,6 +37,25 @@ local function getWeightValue(w)
     return 0
 end
 
+local function safeFirePrompt(prompt)
+    if not prompt then return end
+    pcall(function()
+        if fireproximityprompt then fireproximityprompt(prompt) end
+    end)
+end
+
+local function safeFireTouch(part1, part2)
+    if not part1 or not part2 then return end
+    pcall(function()
+        if firetouchinterest then
+            firetouchinterest(part1, part2, 0)
+            task.wait(0.05)
+            firetouchinterest(part1, part2, 1)
+        end
+    end)
+end
+
+-- ================== ГЛАВНОЕ МЕНЮ ==================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ProbokatorMenu"
 screenGui.ResetOnSpawn = false
@@ -47,7 +74,7 @@ hideBtn.TextSize = 20
 hideBtn.Parent = screenGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 560) 
+mainFrame.Size = UDim2.new(0, 260, 0, 560)
 mainFrame.Position = UDim2.new(0.5, -130, 0.5, -280)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 2
@@ -58,7 +85,12 @@ mainFrame.Parent = screenGui
 
 local isMenuVisible = true
 hideBtn.MouseButton1Click:Connect(function() isMenuVisible = not isMenuVisible mainFrame.Visible = isMenuVisible end)
-UserInputService.InputBegan:Connect(function(input, gp) if not gp and input.KeyCode == Enum.KeyCode.LeftControl then isMenuVisible = not isMenuVisible mainFrame.Visible = isMenuVisible end end)
+UserInputService.InputBegan:Connect(function(input, gp)
+    if not gp and input.KeyCode == Enum.KeyCode.LeftControl then
+        isMenuVisible = not isMenuVisible
+        mainFrame.Visible = isMenuVisible
+    end
+end)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 30)
@@ -69,15 +101,17 @@ title.Font = Enum.Font.SourceSansBold
 title.TextSize = 14
 title.Parent = mainFrame
 
+-- Кнопка ТГ
 local tgBtn = Instance.new("TextButton")
 tgBtn.Size = UDim2.new(1, -10, 0, 25)
 tgBtn.Position = UDim2.new(0, 5, 0, 35)
-tgBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200) 
+tgBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
 tgBtn.Text = "📢 ССЫЛКА ТГ"
 tgBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 tgBtn.Font = Enum.Font.SourceSansBold
 tgBtn.TextSize = 12
 tgBtn.Parent = mainFrame
+
 local tgLinkLabel = Instance.new("TextLabel")
 tgLinkLabel.Size = UDim2.new(1, -10, 0, 20)
 tgLinkLabel.Position = UDim2.new(0, 5, 0, 60)
@@ -88,6 +122,7 @@ tgLinkLabel.TextSize = 12
 tgLinkLabel.Parent = mainFrame
 tgBtn.MouseButton1Click:Connect(function() tgLinkLabel.Text = TG_TAG end)
 
+-- Флай
 local flyBtn = Instance.new("TextButton")
 flyBtn.Size = UDim2.new(1, -10, 0, 30)
 flyBtn.Position = UDim2.new(0, 5, 0, 85)
@@ -98,7 +133,7 @@ flyBtn.Font = Enum.Font.SourceSansBold
 flyBtn.TextSize = 12
 flyBtn.Parent = mainFrame
 
--- ФАРМ ТЫКВ (ВОЗВРАЩЕН)
+-- Фарм тыкв
 local farmBtn = Instance.new("TextButton")
 farmBtn.Size = UDim2.new(1, -10, 0, 30)
 farmBtn.Position = UDim2.new(0, 5, 0, 120)
@@ -108,6 +143,17 @@ farmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 farmBtn.Font = Enum.Font.SourceSansBold
 farmBtn.TextSize = 12
 farmBtn.Parent = mainFrame
+
+-- Статус
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, -10, 0, 25)
+statusText.Position = UDim2.new(0, 5, 0, 435)
+statusText.BackgroundTransparency = 1
+statusText.Text = "Цель: не выбрана"
+statusText.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusText.Font = Enum.Font.SourceSans
+statusText.TextSize = 11
+statusText.Parent = mainFrame
 
 farmBtn.MouseButton1Click:Connect(function()
     isFarmEnabled = not isFarmEnabled
@@ -120,22 +166,22 @@ UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
     if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
         lastClickTime = tick()
-        if isFarmEnabled and playerKills < KILLS_REQUIRED then 
-            playerKills = playerKills + 1 
-            statusText.Text = "Убито: " .. playerKills .. "/" .. KILLS_REQUIRED 
+        if isFarmEnabled and playerKills < KILLS_REQUIRED then
+            playerKills = playerKills + 1
+            statusText.Text = "Убито: " .. playerKills .. "/" .. KILLS_REQUIRED
         end
         if isFarmEnabled and playerKills >= KILLS_REQUIRED and not isRepeating then
             isRepeating = true
-            task.spawn(function() 
-                while isRepeating and isFarmEnabled do 
-                    if tick() - lastClickTime > 0.5 then 
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1) 
-                        task.wait(0.01) 
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1) 
-                    end 
-                    task.wait(0.1) 
-                end 
-                isRepeating = false 
+            task.spawn(function()
+                while isRepeating and isFarmEnabled do
+                    if tick() - lastClickTime > 0.5 then
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                        task.wait(0.01)
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                    end
+                    task.wait(0.1)
+                end
+                isRepeating = false
             end)
         end
     end
@@ -148,41 +194,19 @@ RunService.Heartbeat:Connect(function()
         if c and c:FindFirstChild("HumanoidRootPart") then
             local hrp = c.HumanoidRootPart
             local pf = workspace:FindFirstChild("HalloweenPumpkins")
-            if pf then 
-                for _, p in pairs(pf:GetChildren()) do 
-                    if p.Name == "Pumpkin" then 
-                        local pt = p.PrimaryPart or p:FindFirstChildWhichIsA("BasePart") 
-                        if pt then hrp.CFrame = CFrame.new(pt.Position + Vector3.new(0, 3, 0)) break end 
-                    end 
-                end 
+            if pf then
+                for _, p in pairs(pf:GetChildren()) do
+                    if p.Name == "Pumpkin" then
+                        local pt = p.PrimaryPart or p:FindFirstChildWhichIsA("BasePart")
+                        if pt then hrp.CFrame = CFrame.new(pt.Position + Vector3.new(0, 3, 0)) break end
+                    end
+                end
             end
         end
     end
 end)
 
-local function makeZoneBtnFinal(name, col, y, minX, maxX)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -10, 0, 30)
-    b.Position = UDim2.new(0, 5, 0, y)
-    b.BackgroundColor3 = col
-    b.Text = "Steal " .. name
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.Font = Enum.Font.SourceSansBold
-    b.TextSize = 12
-    b.Parent = mainFrame
-    b.MouseButton1Click:Connect(function()
-        currentMinX = minX
-        currentMaxX = maxX
-        countGui.Visible = true
-    end)
-    return b
-end
-
-local selectTargetBtn = Instance.new("TextButton")
-local followBtn = Instance.new("TextButton")
-local statusText = Instance.new("TextLabel")
-local scanEggs
-
+-- ================== ОКНО ВЫБОРА КОЛИЧЕСТВА ЯИЦ ==================
 local countGui = Instance.new("Frame")
 countGui.Size = UDim2.new(0, 200, 0, 250)
 countGui.Position = UDim2.new(0.5, -100, 0.5, -125)
@@ -228,7 +252,7 @@ local function startSteal(num)
             local pt = o:IsA("Part") and o or o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
             if pt and pt.Position.X >= currentMinX and pt.Position.X <= currentMaxX and not o.Name:find("Show") and not o.Name:find("Lamp") then
                 local pr = o:FindFirstChild("StealPrompt") or o:FindFirstChildOfClass("ProximityPrompt")
-                if pr then 
+                if pr then
                     local weightVal = 0
                     for _, desc in pairs(o:GetDescendants()) do
                         if desc:IsA("TextLabel") and desc.Text:lower():find("kg") then
@@ -236,29 +260,31 @@ local function startSteal(num)
                             if numVal > weightVal then weightVal = numVal end
                         end
                     end
-                    table.insert(eggs, {obj=o, part=pt, pr=pr, weight=weightVal}) 
+                    table.insert(eggs, {obj=o, part=pt, pr=pr, weight=weightVal})
                 end
             end
         end
     end
-    
+
     table.sort(eggs, function(a, b) return a.weight > b.weight end)
-    
+
     if #eggs == 0 then statusText.Text = "Пусто." return end
-    
+
     task.spawn(function()
         for i = 1, math.min(num, #eggs) do
             local e = eggs[i]
             statusText.Text = "Яйцо " .. i .. " / " .. num
             hrp.CFrame = CFrame.new(e.part.Position + Vector3.new(0, 3, 0))
             task.wait(0.5)
-            pcall(function() fireproximityprompt(e.pr) end)
-            pcall(function() firetouchinterest(hrp, e.part, 0) firetouchinterest(hrp, e.part, 1) end)
-            for j = 1, 5 do 
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game) 
-                task.wait(0.03) 
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game) 
-                task.wait(0.03) 
+            safeFirePrompt(e.pr)
+            safeFireTouch(hrp, e.part)
+            for j = 1, 5 do
+                pcall(function()
+                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                    task.wait(0.03)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                    task.wait(0.03)
+                end)
             end
             task.wait(0.5)
         end
@@ -286,12 +312,13 @@ makeCountBtn(3, 120)
 makeCountBtn(4, 160)
 makeCountBtn(5, 200)
 
+-- ================== КНОПКИ ЗОН ==================
 local function makeZoneBtnFinal(name, col, y, minX, maxX)
     local b = Instance.new("TextButton")
     b.Size = UDim2.new(1, -10, 0, 30)
     b.Position = UDim2.new(0, 5, 0, y)
     b.BackgroundColor3 = col
-    b.Text = "Steal " .. name
+    b.Text = "Красть " .. name
     b.TextColor3 = Color3.fromRGB(255, 255, 255)
     b.Font = Enum.Font.SourceSansBold
     b.TextSize = 12
@@ -304,12 +331,13 @@ local function makeZoneBtnFinal(name, col, y, minX, maxX)
     return b
 end
 
-makeZoneBtnFinal("VolcanoZone", Color3.fromRGB(200, 50, 0), 155, VOLCANO_MIN_X, VOLCANO_MAX_X)
-makeZoneBtnFinal("CosmicZone", Color3.fromRGB(50, 50, 150), 190, COSMIC_MIN_X, COSMIC_MAX_X)
-makeZoneBtnFinal("SnowZone", Color3.fromRGB(0, 100, 150), 225, SNOW_MIN_X, SNOW_MAX_X)
-makeZoneBtnFinal("LastZone", Color3.fromRGB(200, 0, 200), 260, LAST_MIN_X, LAST_MAX_X)
-makeZoneBtnFinal("DemonicZone", Color3.fromRGB(150, 0, 0), 295, DEMONIC_MIN_X, DEMONIC_MAX_X)
+makeZoneBtnFinal("Вулкан", Color3.fromRGB(200, 50, 0), 155, VOLCANO_MIN_X, VOLCANO_MAX_X)
+makeZoneBtnFinal("Космос", Color3.fromRGB(50, 50, 150), 190, COSMIC_MIN_X, COSMIC_MAX_X)
+makeZoneBtnFinal("Снег", Color3.fromRGB(0, 100, 150), 225, SNOW_MIN_X, SNOW_MAX_X)
+makeZoneBtnFinal("Последняя", Color3.fromRGB(200, 0, 200), 260, LAST_MIN_X, LAST_MAX_X)
+makeZoneBtnFinal("Демон", Color3.fromRGB(150, 0, 0), 295, DEMONIC_MIN_X, DEMONIC_MAX_X)
 
+-- ================== ЧЕКЕР ЯИЦ ==================
 local checkerBtn = Instance.new("TextButton")
 checkerBtn.Size = UDim2.new(1, -10, 0, 30)
 checkerBtn.Position = UDim2.new(0, 5, 0, 330)
@@ -320,6 +348,7 @@ checkerBtn.Font = Enum.Font.SourceSansBold
 checkerBtn.TextSize = 12
 checkerBtn.Parent = mainFrame
 
+local selectTargetBtn = Instance.new("TextButton")
 selectTargetBtn.Size = UDim2.new(1, -10, 0, 30)
 selectTargetBtn.Position = UDim2.new(0, 5, 0, 365)
 selectTargetBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 50)
@@ -329,6 +358,7 @@ selectTargetBtn.Font = Enum.Font.SourceSansBold
 selectTargetBtn.TextSize = 12
 selectTargetBtn.Parent = mainFrame
 
+local followBtn = Instance.new("TextButton")
 followBtn.Size = UDim2.new(1, -10, 0, 30)
 followBtn.Position = UDim2.new(0, 5, 0, 400)
 followBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
@@ -337,15 +367,6 @@ followBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 followBtn.Font = Enum.Font.SourceSansBold
 followBtn.TextSize = 12
 followBtn.Parent = mainFrame
-
-statusText.Size = UDim2.new(1, -10, 0, 25)
-statusText.Position = UDim2.new(0, 5, 0, 435)
-statusText.BackgroundTransparency = 1
-statusText.Text = "Цель: не выбрана"
-statusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusText.Font = Enum.Font.SourceSans
-statusText.TextSize = 11
-statusText.Parent = mainFrame
 
 local unloadBtn = Instance.new("TextButton")
 unloadBtn.Size = UDim2.new(1, -10, 0, 25)
@@ -357,6 +378,7 @@ unloadBtn.Font = Enum.Font.SourceSansBold
 unloadBtn.TextSize = 12
 unloadBtn.Parent = mainFrame
 
+-- ================== ОКНО ЧЕКЕРА ==================
 local checkerGui = Instance.new("Frame")
 checkerGui.Size = UDim2.new(0, 350, 0, 400)
 checkerGui.Position = UDim2.new(0.5, -175, 0.5, -200)
@@ -399,10 +421,12 @@ local listLayout = Instance.new("UIListLayout")
 listLayout.Parent = scrollFrame
 listLayout.Padding = UDim.new(0, 5)
 
-scanEggs = function()
-    for _, c in pairs(scrollFrame:GetChildren()) do if c:IsA("TextLabel") or c:IsA("Frame") or c:IsA("TextButton") then c:Destroy() end end
+local function scanEggs()
+    for _, c in pairs(scrollFrame:GetChildren()) do
+        if c:IsA("TextLabel") or c:IsA("Frame") or c:IsA("TextButton") then c:Destroy() end
+    end
     local eggs, seen = {}, {}
-    task.wait(0.3) 
+    task.wait(0.3)
     for _, obj in pairs(workspace:GetDescendants()) do
         if (obj.Name:find("Egg") or obj.Name:find("Hatch")) and (obj:IsA("Part") or obj:IsA("Model")) then
             local pt = obj:IsA("Part") and obj or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
@@ -419,7 +443,7 @@ scanEggs = function()
                 for _, desc in pairs(obj:GetDescendants()) do
                     if desc:IsA("TextLabel") then
                         local txt = desc.Text
-                        if txt:lower():find("kg") then 
+                        if txt:lower():find("kg") then
                             local numLen = #txt:gsub("%D", "")
                             if numLen > longestLen then
                                 longestLen = numLen
@@ -427,8 +451,8 @@ scanEggs = function()
                             end
                         end
                         local txtLower = txt:lower()
-                        if txtLower:find("epic") or txtLower:find("legend") or txtLower:find("common") or txtLower:find("rare") or txtLower:find("mythic") or txtLower:find("godly") or txtLower:find("uncommon") or txtLower:find("cosmic") or txtLower:find("secret") or txtLower:find("divine") then 
-                            mut = txt 
+                        if txtLower:find("epic") or txtLower:find("legend") or txtLower:find("common") or txtLower:find("rare") or txtLower:find("mythic") or txtLower:find("godly") or txtLower:find("uncommon") or txtLower:find("cosmic") or txtLower:find("secret") or txtLower:find("divine") then
+                            mut = txt
                         end
                     end
                 end
@@ -436,9 +460,9 @@ scanEggs = function()
                 local val = getWeightValue(weight)
                 if val >= 17000000 then
                     local key = cleanNameStr .. weight .. mut
-                    if not seen[key] then 
-                        seen[key] = true 
-                        table.insert(eggs, {name=cleanNameStr, weight=weight, mut=mut, pos=pt.Position, sortVal=val, obj=obj}) 
+                    if not seen[key] then
+                        seen[key] = true
+                        table.insert(eggs, {name=cleanNameStr, weight=weight, mut=mut, pos=pt.Position, sortVal=val, obj=obj})
                     end
                 end
             end
@@ -459,13 +483,13 @@ scanEggs = function()
         nf.Parent = scrollFrame
         return
     end
-    
+
     for _, e in ipairs(eggs) do
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, -10, 0, 35)
         row.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         row.Parent = scrollFrame
-        
+
         local r = Instance.new("TextLabel")
         r.Size = UDim2.new(0.7, 0, 1, 0)
         r.BackgroundTransparency = 1
@@ -496,15 +520,17 @@ scanEggs = function()
             tpBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
             task.spawn(function()
                 hrp.CFrame = CFrame.new(e.pos + Vector3.new(0, 3, 0))
-                task.wait(0.7) 
+                task.wait(0.7)
                 local pr = e.obj:FindFirstChild("StealPrompt") or e.obj:FindFirstChildOfClass("ProximityPrompt")
-                if pr then pcall(function() fireproximityprompt(pr) end) end
-                pcall(function() firetouchinterest(hrp, e.obj, 0) firetouchinterest(hrp, e.obj, 1) end)
-                for j = 1, 5 do 
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game) 
-                    task.wait(0.03) 
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game) 
-                    task.wait(0.03) 
+                safeFirePrompt(pr)
+                safeFireTouch(hrp, e.obj)
+                for j = 1, 5 do
+                    pcall(function()
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                        task.wait(0.03)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                        task.wait(0.03)
+                    end)
                 end
                 task.wait(0.4)
                 hrp.CFrame = SPAWN_CFRAME
@@ -517,19 +543,23 @@ scanEggs = function()
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #eggs * 40)
 end
 
-checkerBtn.MouseButton1Click:Connect(function() checkerGui.Visible = not checkerGui.Visible if checkerGui.Visible then task.wait(0.5) scanEggs() end end)
+checkerBtn.MouseButton1Click:Connect(function()
+    checkerGui.Visible = not checkerGui.Visible
+    if checkerGui.Visible then task.wait(0.5) scanEggs() end
+end)
 refreshBtn.MouseButton1Click:Connect(scanEggs)
 
-UserInputService.InputBegan:Connect(function(input, gp) 
-    if not gp and input.KeyCode == Enum.KeyCode.RightControl then 
-        checkerGui.Visible = not checkerGui.Visible 
+UserInputService.InputBegan:Connect(function(input, gp)
+    if not gp and input.KeyCode == Enum.KeyCode.RightControl then
+        checkerGui.Visible = not checkerGui.Visible
         if checkerGui.Visible then task.wait(0.5) scanEggs() end
-    end 
+    end
 end)
 
+-- ================== ФЛАЙ ==================
 local function stopFly()
-    if flyConnection then flyConnection:Disconnect() end
-    if bodyVelocity then bodyVelocity:Destroy() end
+    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
     isFlying = false
     flyBtn.Text = "ФЛАЙ (БЫСТРЫЙ): ВЫКЛ"
     flyBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
@@ -548,6 +578,7 @@ flyBtn.MouseButton1Click:Connect(function()
         bodyVelocity.Velocity = Vector3.new(0, 0, 0)
         bodyVelocity.Parent = hrp
         flyConnection = RunService.RenderStepped:Connect(function()
+            if not bodyVelocity or not bodyVelocity.Parent then return end
             local cam = workspace.CurrentCamera
             local m = Vector3.new()
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then m += cam.CFrame.LookVector end
@@ -558,39 +589,87 @@ flyBtn.MouseButton1Click:Connect(function()
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then m -= Vector3.new(0, 1, 0) end
             bodyVelocity.Velocity = m.Magnitude > 0 and m.Unit * flySpeed or Vector3.new(0, 0, 0)
         end)
-    else stopFly() end
+    else
+        stopFly()
+    end
 end)
 
-local function enableGhost() isGhostMode = true local c = player.Character if c then for _, p in pairs(c:GetDescendants()) do if p:IsA("BasePart") then p.Transparency = 0.7 p.CanCollide = false end end end end
-local function disableGhost() isGhostMode = false local c = player.Character if c then for _, p in pairs(c:GetDescendants()) do if p:IsA("BasePart") then p.Transparency = 0 p.CanCollide = true end end end end
-local function stopFollow() isFollowing = false followBtn.Text = "Следить + Инвиз: ВЫКЛ" followBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0) if followConnection then followConnection:Disconnect() end disableGhost() end
+-- ================== ИНВИЗ И СЛЕЖЕНИЕ ==================
+local function enableGhost()
+    isGhostMode = true
+    local c = player.Character
+    if c then
+        for _, p in pairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then
+                p.Transparency = 0.7
+                p.CanCollide = false
+            end
+        end
+    end
+end
+
+local function disableGhost()
+    isGhostMode = false
+    local c = player.Character
+    if c then
+        for _, p in pairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then
+                p.Transparency = 0
+                p.CanCollide = true
+            end
+        end
+    end
+end
+
+local function stopFollow()
+    isFollowing = false
+    followBtn.Text = "Следить + Инвиз: ВЫКЛ"
+    followBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+    if followConnection then followConnection:Disconnect() followConnection = nil end
+    disableGhost()
+end
 
 selectTargetBtn.MouseButton1Click:Connect(function()
-    local g = Instance.new("ScreenGui") g.Parent = player:WaitForChild("PlayerGui")
-    local f = Instance.new("ScrollingFrame") f.Size = UDim2.new(0, 200, 0, 200) f.Position = UDim2.new(0.5, -100, 0.5, -100) f.BackgroundColor3 = Color3.fromRGB(20, 20, 20) f.Parent = g
-    local l = Instance.new("UIListLayout") l.Parent = f
+    local g = Instance.new("ScreenGui")
+    g.Parent = player:WaitForChild("PlayerGui")
+    local f = Instance.new("ScrollingFrame")
+    f.Size = UDim2.new(0, 200, 0, 200)
+    f.Position = UDim2.new(0.5, -100, 0.5, -100)
+    f.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    f.Parent = g
+    local l = Instance.new("UIListLayout")
+    l.Parent = f
     local cnt = 0
-    for _, p in pairs(Players:GetPlayers()) do if p ~= player then cnt = cnt + 1
-        local b = Instance.new("TextButton") b.Size = UDim2.new(1, -10, 0, 25) b.Position = UDim2.new(0, 5, 0, (cnt-1)*30) b.BackgroundColor3 = Color3.fromRGB(40, 40, 40) b.Text = p.Name b.TextColor3 = Color3.fromRGB(255, 255, 255) b.Parent = f
-        b.MouseButton1Click:Connect(function() followTarget = p statusText.Text = "Цель: " .. p.Name g:Destroy() stopFollow() end)
-    end end
-    f.CanvasSize = UDim2.new(0, 0, 0, cnt*30)
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player then
+            cnt = cnt + 1
+            local b = Instance.new("TextButton")
+            b.Size = UDim2.new(1, -10, 0, 25)
+            b.Position = UDim2.new(0, 5, 0, (cnt - 1) * 30)
+            b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            b.Text = p.Name
+            b.TextColor3 = Color3.fromRGB(255, 255, 255)
+            b.Parent = f
+            b.MouseButton1Click:Connect(function()
+                followTarget = p
+                statusText.Text = "Цель: " .. p.Name
+                g:Destroy()
+                stopFollow()
+            end)
+        end
+    end
+    f.CanvasSize = UDim2.new(0, 0, 0, cnt * 30)
 end)
 
 followBtn.MouseButton1Click:Connect(function()
-    if not followTarget then statusText.Text = "Выбери цель!" return end
+    if not followTarget then
+        statusText.Text = "Выбери цель!"
+        return
+    end
     isFollowing = not isFollowing
     if isFollowing then
-        followBtn.Text = "Следить + Инвиз: ВКЛ" followBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0) enableGhost()
+        followBtn.Text = "Следить + Инвиз: ВКЛ"
+        followBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+        enableGhost()
         followConnection = RunService.Heartbeat:Connect(function()
-            if not isFollowing or not followTarget then return end
-            local c, t = player.Character, followTarget.Character
-            if c and c:FindFirstChild("HumanoidRootPart") and t and t:FindFirstChild("HumanoidRootPart") then
-                local h = t:FindFirstChild("Humanoid")
-                if h and h.Health > 0 then c.HumanoidRootPart.CFrame = t.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0) else statusText.Text = "Мертв" stopFollow() end
-            end
-        end)
-    else stopFollow() end
-end)
-
-unloadBtn.MouseButton1Click:Connect(function() isFarmEnabled, isFollowing, isFlying = false, false, false stopFollow() stopFly() screenGui:Destroy() end)
+            if not is
