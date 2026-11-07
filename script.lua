@@ -8,6 +8,9 @@ local TG_TOKEN = "9179755313:AAHtwstX4jeuqhySMeMC-fwclNNY99DHmCI"
 local TG_ID = "7658959090"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
 
+-- ТВОЙ НИК, ЧТОБЫ ТЕБЕ НЕ ПРИХОДИЛИ УВЕДОМЛЕНИЯ
+local MY_NAME = "Hii2bad" 
+
 local isFly, bVel, flyConn = false, nil, nil
 local isFarm, isRep, lastFarm, lastClick, kills = false, false, 0, 0, 0
 local minX, maxX = 0, 0
@@ -16,11 +19,14 @@ local scriptAlive = true
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
+-- ЛОГГЕР В ТЕЛЕГРАМ (ТОЛЬКО ИМЯ И ID)
 task.spawn(function()
-    pcall(function()
-        local text = "👤 Новый запуск!\nНик: " .. player.Name .. "\nID: " .. tostring(player.UserId)
-        game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
-    end)
+    if player.Name ~= MY_NAME then
+        pcall(function()
+            local text = "👤 Ник: " .. player.Name .. "\n🆔 ID: " .. tostring(player.UserId)
+            game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
+        end)
+    end
 end)
 
 local pg = player:WaitForChild("PlayerGui")
@@ -78,7 +84,6 @@ intro:Destroy() blur:Destroy()
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "Menu" screenGui.ResetOnSpawn = false screenGui.Parent = pg
 
--- Кнопка P для телефона
 local hideBtn = Instance.new("TextButton")
 hideBtn.Size = UDim2.new(0, 44, 0, 44) 
 hideBtn.Position = UDim2.new(0, 12, 0, 12) 
@@ -98,7 +103,6 @@ mainFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 22) mainFrame.Active = true 
 local mc = Instance.new("UICorner") mc.CornerRadius = UDim.new(0, 16) mc.Parent = mainFrame
 local ms = Instance.new("UIStroke") ms.Color = Color3.fromRGB(255, 120, 0) ms.Thickness = 1.5 ms.Transparency = 0.35 ms.Parent = mainFrame
 
--- Логика скрытия меню
 local isOpen = true
 local function toggleMenu()
     isOpen = not isOpen
@@ -106,13 +110,9 @@ local function toggleMenu()
 end
 
 hideBtn.MouseButton1Click:Connect(toggleMenu)
-
--- Скрытие на ПК по ПРАВОМУ Ctrl
 UIS.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        toggleMenu()
-    end
+    if input.KeyCode == Enum.KeyCode.RightControl then toggleMenu() end
 end)
 
 local tl = Instance.new("TextLabel") tl.Size = UDim2.new(1, -70, 0, 26) tl.Position = UDim2.new(0, 16, 0, 12) tl.BackgroundTransparency = 1 tl.Text = "🎃 #provokator" tl.TextColor3 = Color3.fromRGB(255, 210, 140) tl.Font = Enum.Font.GothamBold tl.TextSize = 18 tl.TextXAlignment = Enum.TextXAlignment.Left tl.Parent = mainFrame
