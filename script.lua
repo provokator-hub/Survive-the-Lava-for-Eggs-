@@ -1,799 +1,329 @@
--- ============================================================
--- #provokator-Hub скрипт на 2 игры EroxBlox
--- Создано командой "Provokator-Hub"
--- ============================================================
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local UIS = game:GetService("UserInputService")
+local VIM = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
-
--- ================== НАСТРОЙКА ==================
+local TG = "@EroxEggScript"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
-local TG_TAG = "@EroxEggScript"
+local CHECK_INTERVAL = 5
 
--- ================== ЧТЕНИЕ СТАТУСА ==================
-local function fetchStatus()
-    local ok, result = pcall(function()
-        return game:HttpGet(STATUS_URL, true)
-    end)
-    if not ok or not result then
-        return "error"
+local V_MIN, V_MAX, C_MIN, C_MAX = 500, 800, 800, 1100
+local S_MIN, S_MAX, L_MIN, L_MAX = 2500, 3000, 3400, 4000
+local D_MIN, D_MAX = 4000, 4600
+local SPAWN = CFrame.new(0, 10, 0)
+
+local isFly, flySpd, flyConn, bVel = false, 3500, nil, nil
+local fTarget, isFollow, fConn = nil, false, nil
+local isFarm, isRep, lastFarm, lastClick, kills = false, false, 0, 0, 0
+local minX, maxX = 0, 0
+local countGui, screenGui, mainFrame, flyBtn, farmBtn, statusTxt, followBtn
+local scriptAlive = true
+
+local function clean(n) return n:gsub("Hatch", ""):gsub("Egg", ""):gsub("Part", ""):gsub("_", " "):gsub("^%s*(.-)%s*$", "%1") end
+local function getW(w) local n = w:match("([%d%.]+)") if n then return tonumber(n) end return 0 end
+local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
+local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
+
+local function showOff()
+    local pg = player:FindFirstChild("PlayerGui") if not pg then return end
+    local g = Instance.new("ScreenGui") g.Name = "Off" g.ResetOnSpawn = false g.Parent = pg
+    local f = Instance.new("Frame") f.Size = UDim2.new(0, 420, 0, 260) f.Position = UDim2.new(0.5, -210, 0.5, -130) f.BackgroundColor3 = Color3.fromRGB(18, 18, 22) f.Parent = g
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 14) c.Parent = f
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(255, 60, 60) s.Thickness = 1.5 s.Parent = f
+    local ic = Instance.new("TextLabel") ic.Size = UDim2.new(0, 64, 0, 64) ic.Position = UDim2.new(0.5, -32, 0, 30) ic.BackgroundColor3 = Color3.fromRGB(60, 0, 0) ic.Text = "🔒" ic.TextSize = 34 ic.TextColor3 = Color3.fromRGB(255,255,255) ic.Parent = f
+    local tc = Instance.new("UICorner") tc.CornerRadius = UDim.new(1, 0) tc.Parent = ic
+    local t = Instance.new("TextLabel") t.Size = UDim2.new(1, -40, 0, 34) t.Position = UDim2.new(0, 20, 0, 104) t.BackgroundTransparency = 1 t.Text = "СКРИПТ ОТКЛЮЧЕН" t.TextColor3 = Color3.fromRGB(255, 80, 80) t.Font = Enum.Font.GothamBold t.TextSize = 22 t.Parent = f
+    local st = Instance.new("TextLabel") st.Size = UDim2.new(1, -40, 0, 30) st.Position = UDim2.new(0, 20, 0, 182) st.BackgroundTransparency = 1 st.Text = "Подробности в ТГК " .. TG st.TextColor3 = Color3.fromRGB(0, 220, 255) st.Font = Enum.Font.GothamMedium st.TextSize = 14 st.Parent = f
+    local b = Instance.new("TextButton") b.Size = UDim2.new(1, -40, 0, 36) b.Position = UDim2.new(0, 20, 1, -56) b.BackgroundColor3 = Color3.fromRGB(40, 40, 48) b.Text = "ЗАКРЫТЬ" b.TextColor3 = Color3.fromRGB(230,230,230) b.Font = Enum.Font.GothamBold b.Parent = f
+    local bc = Instance.new("UICorner") bc.CornerRadius = UDim.new(0, 8) bc.Parent = b
+    b.MouseButton1Click:Connect(function() g:Destroy() end)
+end
+
+-- ПРОВЕРКА СТАТУСА ПРИ ЗАПУСКЕ
+local startupOk, startupRes = pcall(function() return game:HttpGet(STATUS_URL, true) end)
+if startupOk and startupRes and #startupRes > 0 then
+    local startupCl = startupRes:gsub("%s+", ""):lower()
+    if startupCl:find("off") then
+        showOff()
+        return
     end
-    -- нормализуем: убираем пробелы, BOM, переводы строк
-    local cleaned = tostring(result):gsub("%s+", ""):lower()
-    if cleaned:find("off") then return "off" end
-    if cleaned:find("on") then return "on" end
-    return "error"
 end
 
-local status = fetchStatus()
-
--- ================== ЭКРАН "ОТКЛЮЧЕНО" ==================
-local function showDisabledScreen()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "ProvokatorDisabled"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.Parent = player:WaitForChild("PlayerGui")
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 360, 0, 180)
-    frame.Position = UDim2.new(0.5, -180, 0.5, -90)
-    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = Color3.fromRGB(255, 40, 40)
-    frame.Active = true
-    frame.Draggable = true
-    frame.Parent = gui
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 50)
-    title.BackgroundColor3 = Color3.fromRGB(60, 0, 0)
-    title.Text = "⛔ СКРИПТ ОТКЛЮЧЕН"
-    title.TextColor3 = Color3.fromRGB(255, 60, 60)
-    title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 20
-    title.Parent = frame
-
-    local msg = Instance.new("TextLabel")
-    msg.Size = UDim2.new(1, -20, 0, 70)
-    msg.Position = UDim2.new(0, 10, 0, 60)
-    msg.BackgroundTransparency = 1
-    msg.Text = "Подробности в ТГК " .. TG_TAG
-    msg.TextColor3 = Color3.fromRGB(255, 255, 255)
-    msg.Font = Enum.Font.SourceSansBold
-    msg.TextSize = 15
-    msg.TextWrapped = true
-    msg.Parent = frame
-
-    local close = Instance.new("TextButton")
-    close.Size = UDim2.new(1, -20, 0, 30)
-    close.Position = UDim2.new(0, 10, 1, -40)
-    close.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-    close.Text = "ЗАКРЫТЬ"
-    close.TextColor3 = Color3.fromRGB(255, 255, 255)
-    close.Font = Enum.Font.SourceSansBold
-    close.TextSize = 14
-    close.Parent = frame
-    close.MouseButton1Click:Connect(function() gui:Destroy() end)
+local function killScript()
+    if not scriptAlive then return end
+    scriptAlive = false
+    isFarm, isFollow, isFly = false, false, false
+    if fConn then fConn:Disconnect() end
+    if flyConn then flyConn:Disconnect() end
+    if bVel then bVel:Destroy() end
+    if screenGui then screenGui:Destroy() end
+    showOff()
 end
 
--- ================== РЕАКЦИЯ НА СТАТУС ==================
-if status == "off" then
-    showDisabledScreen()
-    return
-elseif status == "error" then
-    -- Если GitHub недоступен / ссылка битая — тоже не запускаем, но с другим текстом
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "ProvokatorStatusError"
-    gui.ResetOnSpawn = false
-    gui.Parent = player:WaitForChild("PlayerGui")
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 360, 0, 170)
-    frame.Position = UDim2.new(0.5, -180, 0.5, -85)
-    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = Color3.fromRGB(255, 200, 0)
-    frame.Active = true
-    frame.Draggable = true
-    frame.Parent = gui
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 45)
-    title.BackgroundColor3 = Color3.fromRGB(50, 40, 0)
-    title.Text = "⚠ НЕ УДАЛОСЬ ПРОЧИТАТЬ СТАТУС"
-    title.TextColor3 = Color3.fromRGB(255, 200, 0)
-    title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 16
-    title.Parent = frame
-
-    local msg = Instance.new("TextLabel")
-    msg.Size = UDim2.new(1, -20, 0, 80)
-    msg.Position = UDim2.new(0, 10, 0, 55)
-    msg.BackgroundTransparency = 1
-    msg.Text = "Проверь ссылку status.lua.\nПодробности в ТГК " .. TG_TAG
-    msg.TextColor3 = Color3.fromRGB(255, 255, 255)
-    msg.Font = Enum.Font.SourceSansBold
-    msg.TextSize = 14
-    msg.TextWrapped = true
-    msg.Parent = frame
-    return
-end
-
--- ================== ДАЛЬШЕ — ПОЛНЫЙ ФУНКЦИОНАЛ ==================
--- (всё меню из предыдущей версии, без изменений)
-
-local VOLCANO_MIN_X, VOLCANO_MAX_X = 500, 800
-local COSMIC_MIN_X, COSMIC_MAX_X = 800, 1100
-local SNOW_MIN_X, SNOW_MAX_X = 2500, 3000
-local LAST_MIN_X, LAST_MAX_X = 3400, 4000
-local DEMONIC_MIN_X, DEMONIC_MAX_X = 4000, 4600
-local SPAWN_CFRAME = CFrame.new(0, 10, 0)
-
-local isFlying, flySpeed, flyConnection, bodyVelocity = false, 300, nil, nil
-local isGhostMode = false
-local followTarget, isFollowing, followConnection = nil, false, nil
-local isFarmEnabled, isRepeating, lastFarmTime, lastClickTime, playerKills = false, false, 0, 0, 0
-local KILLS_REQUIRED = 3
-
-local function cleanName(name)
-    name = name:gsub("Hatch", ""):gsub("Egg", ""):gsub("Part", ""):gsub("_", " ")
-    return name:gsub("^%s*(.-)%s*$", "%1")
-end
-
-local function getWeightValue(w)
-    local num = w:match("([%d%.]+)")
-    if num then return tonumber(num) end
-    return 0
-end
-
-local function safeFirePrompt(prompt)
-    if not prompt then return end
-    pcall(function()
-        if fireproximityprompt then fireproximityprompt(prompt) end
-    end)
-end
-
-local function safeFireTouch(part1, part2)
-    if not part1 or not part2 then return end
-    pcall(function()
-        if firetouchinterest then
-            firetouchinterest(part1, part2, 0)
-            task.wait(0.05)
-            firetouchinterest(part1, part2, 1)
+local function checkStatusAndKill()
+    local ok, res = pcall(function() return game:HttpGet(STATUS_URL, true) end)
+    if ok and res and #res > 0 then
+        local cl = res:gsub("%s+", ""):lower()
+        if cl:find("off") then
+            killScript()
+            return true
         end
-    end)
+    end
+    return false
 end
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ProbokatorMenu"
+screenGui = Instance.new("ScreenGui")
+screenGui.Name = "Menu"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local hideBtn = Instance.new("TextButton")
-hideBtn.Size = UDim2.new(0, 40, 0, 40)
-hideBtn.Position = UDim2.new(0, 10, 0, 10)
-hideBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-hideBtn.BorderSizePixel = 2
-hideBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+hideBtn.Size = UDim2.new(0, 44, 0, 44)
+hideBtn.Position = UDim2.new(0, 12, 0, 12)
+hideBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 5)
 hideBtn.Text = "P"
-hideBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-hideBtn.Font = Enum.Font.SourceSansBold
-hideBtn.TextSize = 20
+hideBtn.TextColor3 = Color3.fromRGB(255, 210, 140)
+hideBtn.Font = Enum.Font.GothamBold
+hideBtn.TextSize = 22
 hideBtn.Parent = screenGui
+local hc = Instance.new("UICorner") hc.CornerRadius = UDim.new(1, 0) hc.Parent = hideBtn
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 560)
-mainFrame.Position = UDim2.new(0.5, -130, 0.5, -280)
-mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 760)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -380)
+mainFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 22)
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
+local mc = Instance.new("UICorner") mc.CornerRadius = UDim.new(0, 16) mc.Parent = mainFrame
+local ms = Instance.new("UIStroke") ms.Color = Color3.fromRGB(255, 120, 0) ms.Thickness = 1.5 ms.Transparency = 0.35 ms.Parent = mainFrame
 
-local isMenuVisible = true
-hideBtn.MouseButton1Click:Connect(function() isMenuVisible = not isMenuVisible mainFrame.Visible = isMenuVisible end)
-UserInputService.InputBegan:Connect(function(input, gp)
-    if not gp and input.KeyCode == Enum.KeyCode.LeftControl then
-        isMenuVisible = not isMenuVisible
-        mainFrame.Visible = isMenuVisible
+local isVis = true
+local function toggle() isVis = not isVis mainFrame.Visible = isVis end
+hideBtn.MouseButton1Click:Connect(toggle)
+UIS.InputBegan:Connect(function(i, g) if not g and i.KeyCode == Enum.KeyCode.LeftControl then toggle() end end)
+
+local tl = Instance.new("TextLabel") tl.Size = UDim2.new(1, -70, 0, 26) tl.Position = UDim2.new(0, 16, 0, 12) tl.BackgroundTransparency = 1 tl.Text = "🎃 #provokator" tl.TextColor3 = Color3.fromRGB(255, 210, 140) tl.Font = Enum.Font.GothamBold tl.TextSize = 18 tl.TextXAlignment = Enum.TextXAlignment.Left tl.Parent = mainFrame
+local sb = Instance.new("TextLabel") sb.Size = UDim2.new(1, -70, 0, 16) sb.Position = UDim2.new(0, 16, 0, 36) sb.BackgroundTransparency = 1 sb.Text = "Halloween • Rocket Way" sb.TextColor3 = Color3.fromRGB(180, 150, 200) sb.Font = Enum.Font.Gotham sb.TextSize = 11 sb.TextXAlignment = Enum.TextXAlignment.Left sb.Parent = mainFrame
+
+local function makeBtn(t, y, h, col, txtCol, click)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, -32, 0, h) b.Position = UDim2.new(0, 16, 0, y) b.BackgroundColor3 = col b.Text = t b.TextColor3 = txtCol b.Font = Enum.Font.GothamBold b.TextSize = 13 b.TextXAlignment = Enum.TextXAlignment.Left b.Parent = mainFrame
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 10) c.Parent = b
+    local p = Instance.new("UIPadding") p.PaddingLeft = UDim.new(0, 14) p.Parent = b
+    if click then b.MouseButton1Click:Connect(click) end
+    return b
+end
+local function makeLbl(t, y)
+    local l = Instance.new("TextLabel") l.Size = UDim2.new(1, -32, 0, 18) l.Position = UDim2.new(0, 16, 0, y) l.BackgroundTransparency = 1 l.Text = t l.TextColor3 = Color3.fromRGB(255, 160, 80) l.Font = Enum.Font.GothamBold l.TextSize = 11 l.TextXAlignment = Enum.TextXAlignment.Left l.Parent = mainFrame
+end
+
+makeLbl("СТАТУС", 64)
+local statLbl = Instance.new("TextLabel") statLbl.Size = UDim2.new(1, -32, 0, 18) statLbl.Position = UDim2.new(0, 16, 0, 116) statLbl.BackgroundTransparency = 1 statLbl.Text = "Проверка каждые 5 сек" statLbl.TextColor3 = Color3.fromRGB(180, 160, 200) statLbl.Font = Enum.Font.Gotham statLbl.TextSize = 11 statLbl.TextXAlignment = Enum.TextXAlignment.Left statLbl.Parent = mainFrame
+
+makeBtn("🔄  ПРОВЕРИТЬ СЕЙЧАС", 84, 30, Color3.fromRGB(40, 80, 60), Color3.fromRGB(180, 255, 200), function()
+    statLbl.Text = "Читаю GitHub..." statLbl.TextColor3 = Color3.fromRGB(255, 200, 0)
+    task.spawn(function()
+        local ok, res = pcall(function() return game:HttpGet(STATUS_URL, true) end)
+        if not ok or not res or #res == 0 then statLbl.Text = "❌ Ошибка чтения" statLbl.TextColor3 = Color3.fromRGB(255, 120, 120) return end
+        local cl = res:gsub("%s+", ""):lower()
+        if cl:find("off") then
+            statLbl.Text = "⛔ Статус: OFF" statLbl.TextColor3 = Color3.fromRGB(255, 120, 120)
+            killScript()
+        elseif cl:find("on") then statLbl.Text = "✅ Статус: ON" statLbl.TextColor3 = Color3.fromRGB(120, 255, 120)
+        else statLbl.Text = "⚠ Нет on/off" statLbl.TextColor3 = Color3.fromRGB(255, 200, 0) end
+    end)
+end)
+
+makeLbl("СВЯЗЬ", 144)
+local tgBtn = makeBtn("📢  ССЫЛКА НА ТЕЛЕГРАМ", 164, 30, Color3.fromRGB(40, 60, 110), Color3.fromRGB(180, 220, 255))
+local tgLbl = Instance.new("TextLabel") tgLbl.Size = UDim2.new(1, -32, 0, 18) tgLbl.Position = UDim2.new(0, 16, 0, 196) tgLbl.BackgroundTransparency = 1 tgLbl.Text = "" tgLbl.TextColor3 = Color3.fromRGB(0, 220, 255) tgLbl.Font = Enum.Font.GothamBold tgLbl.TextSize = 12 tgLbl.TextXAlignment = Enum.TextXAlignment.Left tgLbl.Parent = mainFrame
+tgBtn.MouseButton1Click:Connect(function() tgLbl.Text = TG end)
+
+makeLbl("ВОЗМОЖНОСТИ", 224)
+flyBtn = makeBtn("✈  ФЛАЙ (3500): ВЫКЛ", 244, 36, Color3.fromRGB(60, 20, 90), Color3.fromRGB(230, 200, 255))
+farmBtn = makeBtn("🎃  ФАРМ ТЫКВ: ВЫКЛ", 288, 36, Color3.fromRGB(50, 30, 20), Color3.fromRGB(255, 200, 140))
+
+statusTxt = Instance.new("TextLabel") statusTxt.Size = UDim2.new(1, -32, 0, 20) statusTxt.Position = UDim2.new(0, 16, 0, 330) statusTxt.BackgroundTransparency = 1 statusTxt.Text = "Цель: не выбрана" statusTxt.TextColor3 = Color3.fromRGB(180, 160, 200) statusTxt.Font = Enum.Font.Gotham statusTxt.TextSize = 11 statusTxt.TextXAlignment = Enum.TextXAlignment.Left statusTxt.Parent = mainFrame
+
+makeLbl("КРАЖА ЯИЦ", 360)
+local zDefs = {
+    {n = "Вулкан", c = Color3.fromRGB(200, 60, 0), a = V_MIN, b = V_MAX},
+    {n = "Космос", c = Color3.fromRGB(60, 60, 160), a = C_MIN, b = C_MAX},
+    {n = "Снег", c = Color3.fromRGB(0, 110, 160), a = S_MIN, b = S_MAX},
+    {n = "Последняя", c = Color3.fromRGB(160, 0, 160), a = L_MIN, b = L_MAX},
+    {n = "Демон", c = Color3.fromRGB(150, 0, 0), a = D_MIN, b = D_MAX}
+}
+for i, z in ipairs(zDefs) do
+    makeBtn("🎯  КРАСТЬ: " .. z.n, 380 + (i - 1) * 34, 30, z.c, Color3.fromRGB(255, 255, 255), function()
+        if checkStatusAndKill() then return end
+        minX, maxX = z.a, z.b if countGui then countGui.Visible = true end
+    end)
+end
+
+makeLbl("ИНСТРУМЕНТЫ", 558)
+makeBtn("🔍  ЧЕКЕР ЯИЦ (17M+)", 578, 34, Color3.fromRGB(120, 90, 0), Color3.fromRGB(255, 230, 160))
+local selTargetBtn = makeBtn("👤  ВЫБРАТЬ ЦЕЛЬ", 618, 34, Color3.fromRGB(30, 80, 40), Color3.fromRGB(180, 255, 200))
+followBtn = makeBtn("👻  СЛЕДИТЬ + ИНВИЗ: ВЫКЛ", 658, 34, Color3.fromRGB(90, 50, 10), Color3.fromRGB(255, 210, 160))
+
+makeLbl("УПРАВЛЕНИЕ", 700)
+local unloadBtn = makeBtn("⛔  ВЫГРУЗИТЬ СКРИПТ", 720, 32, Color3.fromRGB(80, 15, 15), Color3.fromRGB(255, 180, 180))
+
+countGui = Instance.new("Frame")
+countGui.Size = UDim2.new(0, 200, 0, 250) countGui.Position = UDim2.new(0.5, -100, 0.5, -125) countGui.BackgroundColor3 = Color3.fromRGB(20, 20, 20) countGui.Visible = false countGui.Active = true countGui.Draggable = true countGui.Parent = screenGui
+local ct = Instance.new("TextLabel") ct.Size = UDim2.new(1, 0, 0, 30) ct.BackgroundTransparency = 1 ct.Text = "Сколько яиц украсть?" ct.TextColor3 = Color3.fromRGB(255, 255, 255) ct.Font = Enum.Font.GothamBold ct.TextSize = 14 ct.Parent = countGui
+local cc = Instance.new("TextButton") cc.Size = UDim2.new(0, 25, 0, 25) cc.Position = UDim2.new(1, -30, 0, 5) cc.BackgroundTransparency = 1 cc.Text = "X" cc.TextColor3 = Color3.fromRGB(255, 50, 50) cc.Font = Enum.Font.GothamBold cc.TextSize = 18 cc.Parent = countGui
+cc.MouseButton1Click:Connect(function() countGui.Visible = false end)
+
+local function startSteal(num)
+    countGui.Visible = false
+    local c = player.Character if not c or not c:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = c.HumanoidRootPart statusTxt.Text = "Ищем..."
+    local eggs = {}
+    for _, o in pairs(workspace:GetDescendants()) do
+        if (o.Name:find("Egg") or o.Name:find("Hatch")) and (o:IsA("Part") or o:IsA("Model")) then
+            local pt = o:IsA("Part") and o or o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
+            if pt and pt.Position.X >= minX and pt.Position.X <= maxX then
+                local pr = o:FindFirstChild("StealPrompt") or o:FindFirstChildOfClass("ProximityPrompt")
+                if pr then table.insert(eggs, {o=o, p=pt, r=pr}) end
+            end
+        end
+    end
+    if #eggs == 0 then statusTxt.Text = "Пусто." return end
+    task.spawn(function()
+        for i = 1, math.min(num, #eggs) do
+            if not scriptAlive then return end
+            local e = eggs[i]
+            statusTxt.Text = "Яйцо " .. i .. " / " .. num
+            hrp.CFrame = CFrame.new(e.p.Position + Vector3.new(0, 3, 0))
+            task.wait(0.5) safePrompt(e.r) safeTouch(hrp, e.p)
+            for j = 1, 5 do pcall(function() VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game) task.wait(0.03) VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game) task.wait(0.03) end) end
+            task.wait(0.5)
+        end
+        hrp.CFrame = SPAWN statusTxt.Text = "Готово (" .. math.min(num, #eggs) .. ")"
+    end)
+end
+
+for i = 1, 5 do
+    local b = Instance.new("TextButton") b.Size = UDim2.new(1, -20, 0, 30) b.Position = UDim2.new(0, 10, 0, 40 + (i - 1) * 40) b.BackgroundColor3 = Color3.fromRGB(60, 60, 60) b.Text = tostring(i) .. " шт." b.TextColor3 = Color3.fromRGB(255, 255, 255) b.Font = Enum.Font.GothamBold b.TextSize = 14 b.Parent = countGui
+    b.MouseButton1Click:Connect(function() 
+        if checkStatusAndKill() then return end
+        startSteal(i) 
+    end)
+end
+
+flyBtn.MouseButton1Click:Connect(function()
+    if checkStatusAndKill() then return end
+    isFly = not isFly local char = player.Character if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    if isFly then
+        flyBtn.Text = "✈  ФЛАЙ (3500): ВКЛ"
+        bVel = Instance.new("BodyVelocity") bVel.MaxForce = Vector3.new(1e6, 1e6, 1e6) bVel.Velocity = Vector3.new(0, 0, 0) bVel.Parent = char.HumanoidRootPart
+        flyConn = RunService.RenderStepped:Connect(function()
+            if not bVel or not bVel.Parent then return end
+            local cam = workspace.CurrentCamera local m = Vector3.new()
+            if UIS:IsKeyDown(Enum.KeyCode.W) then m = m + cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then m = m - cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then m = m - cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then m = m + cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.Space) then m = m + Vector3.new(0, 1, 0) end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then m = m - Vector3.new(0, 1, 0) end
+            bVel.Velocity = m.Magnitude > 0 and m.Unit * flySpd or Vector3.new(0, 0, 0)
+        end)
+    else
+        if flyConn then flyConn:Disconnect() flyConn = nil end
+        if bVel then bVel:Destroy() bVel = nil end
+        flyBtn.Text = "✈  ФЛАЙ (3500): ВЫКЛ"
     end
 end)
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-title.Text = "#provokator"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 14
-title.Parent = mainFrame
-
-local tgBtn = Instance.new("TextButton")
-tgBtn.Size = UDim2.new(1, -10, 0, 25)
-tgBtn.Position = UDim2.new(0, 5, 0, 35)
-tgBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
-tgBtn.Text = "📢 ССЫЛКА ТГ"
-tgBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-tgBtn.Font = Enum.Font.SourceSansBold
-tgBtn.TextSize = 12
-tgBtn.Parent = mainFrame
-local tgLinkLabel = Instance.new("TextLabel")
-tgLinkLabel.Size = UDim2.new(1, -10, 0, 20)
-tgLinkLabel.Position = UDim2.new(0, 5, 0, 60)
-tgLinkLabel.BackgroundTransparency = 1
-tgLinkLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-tgLinkLabel.Font = Enum.Font.SourceSansBold
-tgLinkLabel.TextSize = 12
-tgLinkLabel.Parent = mainFrame
-tgBtn.MouseButton1Click:Connect(function() tgLinkLabel.Text = TG_TAG end)
-
-local flyBtn = Instance.new("TextButton")
-flyBtn.Size = UDim2.new(1, -10, 0, 30)
-flyBtn.Position = UDim2.new(0, 5, 0, 85)
-flyBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
-flyBtn.Text = "ФЛАЙ (БЫСТРЫЙ): ВЫКЛ"
-flyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-flyBtn.Font = Enum.Font.SourceSansBold
-flyBtn.TextSize = 12
-flyBtn.Parent = mainFrame
-
-local farmBtn = Instance.new("TextButton")
-farmBtn.Size = UDim2.new(1, -10, 0, 30)
-farmBtn.Position = UDim2.new(0, 5, 0, 120)
-farmBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-farmBtn.Text = "ФАРМ ТЫКВ: ВЫКЛ"
-farmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-farmBtn.Font = Enum.Font.SourceSansBold
-farmBtn.TextSize = 12
-farmBtn.Parent = mainFrame
-
-local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(1, -10, 0, 25)
-statusText.Position = UDim2.new(0, 5, 0, 435)
-statusText.BackgroundTransparency = 1
-statusText.Text = "Цель: не выбрана"
-statusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusText.Font = Enum.Font.SourceSans
-statusText.TextSize = 11
-statusText.Parent = mainFrame
-
 farmBtn.MouseButton1Click:Connect(function()
-    isFarmEnabled = not isFarmEnabled
-    farmBtn.Text = isFarmEnabled and "ФАРМ ТЫКВ: ВКЛ" or "ФАРМ ТЫКВ: ВЫКЛ"
-    farmBtn.BackgroundColor3 = isFarmEnabled and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(30, 30, 30)
-    playerKills = 0
+    if checkStatusAndKill() then return end
+    isFarm = not isFarm farmBtn.Text = isFarm and "🎃  ФАРМ ТЫКВ: ВКЛ" or "🎃  ФАРМ ТЫКВ: ВЫКЛ" kills = 0
 end)
 
-UserInputService.InputBegan:Connect(function(i, gp)
-    if gp then return end
+UIS.InputBegan:Connect(function(i, g)
+    if g then return end
     if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        lastClickTime = tick()
-        if isFarmEnabled and playerKills < KILLS_REQUIRED then
-            playerKills = playerKills + 1
-            statusText.Text = "Убито: " .. playerKills .. "/" .. KILLS_REQUIRED
-        end
-        if isFarmEnabled and playerKills >= KILLS_REQUIRED and not isRepeating then
-            isRepeating = true
+        lastClick = tick()
+        if isFarm and kills < 3 then kills = kills + 1 statusTxt.Text = "Убито: " .. kills .. "/3" end
+        if isFarm and kills >= 3 and not isRep then
+            isRep = true
             task.spawn(function()
-                while isRepeating and isFarmEnabled do
-                    if tick() - lastClickTime > 0.5 then
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                        task.wait(0.01)
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                    end
+                while isRep and isFarm do
+                    if tick() - lastClick > 0.5 then VIM:SendMouseButtonEvent(0, 0, 0, true, game, 1) task.wait(0.01) VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1) end
                     task.wait(0.1)
                 end
-                isRepeating = false
+                isRep = false
             end)
         end
     end
 end)
 
 RunService.Heartbeat:Connect(function()
-    if isFarmEnabled and tick() - lastFarmTime > 0.5 then
-        lastFarmTime = tick()
-        local c = player.Character
+    if isFarm and tick() - lastFarm > 0.5 then
+        lastFarm = tick() local c = player.Character
         if c and c:FindFirstChild("HumanoidRootPart") then
-            local hrp = c.HumanoidRootPart
             local pf = workspace:FindFirstChild("HalloweenPumpkins")
-            if pf then
-                for _, p in pairs(pf:GetChildren()) do
-                    if p.Name == "Pumpkin" then
-                        local pt = p.PrimaryPart or p:FindFirstChildWhichIsA("BasePart")
-                        if pt then hrp.CFrame = CFrame.new(pt.Position + Vector3.new(0, 3, 0)) break end
-                    end
-                end
-            end
+            if pf then for _, p in pairs(pf:GetChildren()) do if p.Name == "Pumpkin" then local pt = p.PrimaryPart or p:FindFirstChildWhichIsA("BasePart") if pt then c.HumanoidRootPart.CFrame = CFrame.new(pt.Position + Vector3.new(0, 3, 0)) break end end end end
         end
     end
 end)
 
-local countGui = Instance.new("Frame")
-countGui.Size = UDim2.new(0, 200, 0, 250)
-countGui.Position = UDim2.new(0.5, -100, 0.5, -125)
-countGui.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-countGui.BorderSizePixel = 2
-countGui.BorderColor3 = Color3.fromRGB(255, 255, 255)
-countGui.Visible = false
-countGui.Active = true
-countGui.Draggable = true
-countGui.Parent = screenGui
-
-local cTitle = Instance.new("TextLabel")
-cTitle.Size = UDim2.new(1, 0, 0, 30)
-cTitle.BackgroundTransparency = 1
-cTitle.Text = "Сколько яиц украсть?"
-cTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-cTitle.Font = Enum.Font.SourceSansBold
-cTitle.TextSize = 14
-cTitle.Parent = countGui
-
-local cClose = Instance.new("TextButton")
-cClose.Size = UDim2.new(0, 25, 0, 25)
-cClose.Position = UDim2.new(1, -30, 0, 5)
-cClose.BackgroundTransparency = 1
-cClose.Text = "X"
-cClose.TextColor3 = Color3.fromRGB(255, 50, 50)
-cClose.Font = Enum.Font.SourceSansBold
-cClose.TextSize = 18
-cClose.Parent = countGui
-cClose.MouseButton1Click:Connect(function() countGui.Visible = false end)
-
-local currentMinX, currentMaxX = 0, 0
-
-local function startSteal(num)
-    countGui.Visible = false
-    local c = player.Character
-    if not c or not c:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = c.HumanoidRootPart
-    statusText.Text = "Ищем..."
-    local eggs = {}
-    for _, o in pairs(workspace:GetDescendants()) do
-        if (o.Name:find("Egg") or o.Name:find("Hatch") or o.Name:find("Lamp")) and (o:IsA("Part") or o:IsA("Model")) then
-            local pt = o:IsA("Part") and o or o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
-            if pt and pt.Position.X >= currentMinX and pt.Position.X <= currentMaxX and not o.Name:find("Show") and not o.Name:find("Lamp") then
-                local pr = o:FindFirstChild("StealPrompt") or o:FindFirstChildOfClass("ProximityPrompt")
-                if pr then
-                    local weightVal = 0
-                    for _, desc in pairs(o:GetDescendants()) do
-                        if desc:IsA("TextLabel") and desc.Text:lower():find("kg") then
-                            local numVal = getWeightValue(desc.Text)
-                            if numVal > weightVal then weightVal = numVal end
-                        end
-                    end
-                    table.insert(eggs, {obj=o, part=pt, pr=pr, weight=weightVal})
-                end
-            end
-        end
-    end
-
-    table.sort(eggs, function(a, b) return a.weight > b.weight end)
-
-    if #eggs == 0 then statusText.Text = "Пусто." return end
-
-    task.spawn(function()
-        for i = 1, math.min(num, #eggs) do
-            local e = eggs[i]
-            statusText.Text = "Яйцо " .. i .. " / " .. num
-            hrp.CFrame = CFrame.new(e.part.Position + Vector3.new(0, 3, 0))
-            task.wait(0.5)
-            safeFirePrompt(e.pr)
-            safeFireTouch(hrp, e.part)
-            for j = 1, 5 do
-                pcall(function()
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                    task.wait(0.03)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                    task.wait(0.03)
-                end)
-            end
-            task.wait(0.5)
-        end
-        hrp.CFrame = SPAWN_CFRAME
-        statusText.Text = "Готово (" .. math.min(num, #eggs) .. ")"
-    end)
-end
-
-local function makeCountBtn(num, y)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -20, 0, 30)
-    b.Position = UDim2.new(0, 10, 0, y)
-    b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    b.Text = tostring(num) .. " шт."
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.Font = Enum.Font.SourceSansBold
-    b.TextSize = 14
-    b.Parent = countGui
-    b.MouseButton1Click:Connect(function() startSteal(num) end)
-end
-
-makeCountBtn(1, 40)
-makeCountBtn(2, 80)
-makeCountBtn(3, 120)
-makeCountBtn(4, 160)
-makeCountBtn(5, 200)
-
-local function makeZoneBtnFinal(name, col, y, minX, maxX)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -10, 0, 30)
-    b.Position = UDim2.new(0, 5, 0, y)
-    b.BackgroundColor3 = col
-    b.Text = "Красть " .. name
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.Font = Enum.Font.SourceSansBold
-    b.TextSize = 12
-    b.Parent = mainFrame
-    b.MouseButton1Click:Connect(function()
-        currentMinX = minX
-        currentMaxX = maxX
-        countGui.Visible = true
-    end)
-    return b
-end
-
-makeZoneBtnFinal("Вулкан", Color3.fromRGB(200, 50, 0), 155, VOLCANO_MIN_X, VOLCANO_MAX_X)
-makeZoneBtnFinal("Космос", Color3.fromRGB(50, 50, 150), 190, COSMIC_MIN_X, COSMIC_MAX_X)
-makeZoneBtnFinal("Снег", Color3.fromRGB(0, 100, 150), 225, SNOW_MIN_X, SNOW_MAX_X)
-makeZoneBtnFinal("Последняя", Color3.fromRGB(200, 0, 200), 260, LAST_MIN_X, LAST_MAX_X)
-makeZoneBtnFinal("Демон", Color3.fromRGB(150, 0, 0), 295, DEMONIC_MIN_X, DEMONIC_MAX_X)
-
-local checkerBtn = Instance.new("TextButton")
-checkerBtn.Size = UDim2.new(1, -10, 0, 30)
-checkerBtn.Position = UDim2.new(0, 5, 0, 330)
-checkerBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
-checkerBtn.Text = "🔍 ЧЕКЕР ЯИЦ (17M+)"
-checkerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-checkerBtn.Font = Enum.Font.SourceSansBold
-checkerBtn.TextSize = 12
-checkerBtn.Parent = mainFrame
-
-local selectTargetBtn = Instance.new("TextButton")
-selectTargetBtn.Size = UDim2.new(1, -10, 0, 30)
-selectTargetBtn.Position = UDim2.new(0, 5, 0, 365)
-selectTargetBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 50)
-selectTargetBtn.Text = "Выбрать цель"
-selectTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-selectTargetBtn.Font = Enum.Font.SourceSansBold
-selectTargetBtn.TextSize = 12
-selectTargetBtn.Parent = mainFrame
-
-local followBtn = Instance.new("TextButton")
-followBtn.Size = UDim2.new(1, -10, 0, 30)
-followBtn.Position = UDim2.new(0, 5, 0, 400)
-followBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
-followBtn.Text = "Следить + Инвиз: ВЫКЛ"
-followBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-followBtn.Font = Enum.Font.SourceSansBold
-followBtn.TextSize = 12
-followBtn.Parent = mainFrame
-
-local unloadBtn = Instance.new("TextButton")
-unloadBtn.Size = UDim2.new(1, -10, 0, 25)
-unloadBtn.Position = UDim2.new(0, 5, 1, -30)
-unloadBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-unloadBtn.Text = "ВЫГРУЗИТЬ"
-unloadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-unloadBtn.Font = Enum.Font.SourceSansBold
-unloadBtn.TextSize = 12
-unloadBtn.Parent = mainFrame
-
--- Окно чекера
-local checkerGui = Instance.new("Frame")
-checkerGui.Size = UDim2.new(0, 350, 0, 400)
-checkerGui.Position = UDim2.new(0.5, -175, 0.5, -200)
-checkerGui.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-checkerGui.BorderSizePixel = 2
-checkerGui.BorderColor3 = Color3.fromRGB(255, 200, 0)
-checkerGui.Visible = false
-checkerGui.Active = true
-checkerGui.Draggable = true
-checkerGui.Parent = screenGui
-
-local ccTitle = Instance.new("TextLabel")
-ccTitle.Size = UDim2.new(1, 0, 0, 30)
-ccTitle.BackgroundColor3 = Color3.fromRGB(40, 30, 0)
-ccTitle.Text = "🔍 ЧЕКЕР ЯИЦ (от 17M кг)"
-ccTitle.TextColor3 = Color3.fromRGB(255, 200, 0)
-ccTitle.Font = Enum.Font.SourceSansBold
-ccTitle.TextSize = 14
-ccTitle.Parent = checkerGui
-
-local refreshBtn = Instance.new("TextButton")
-refreshBtn.Size = UDim2.new(1, -10, 0, 30)
-refreshBtn.Position = UDim2.new(0, 5, 1, -35)
-refreshBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-refreshBtn.Text = "ОБНОВИТЬ СПИСОК"
-refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-refreshBtn.Font = Enum.Font.SourceSansBold
-refreshBtn.TextSize = 14
-refreshBtn.Parent = checkerGui
-
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(1, -10, 1, -75)
-scrollFrame.Position = UDim2.new(0, 5, 0, 35)
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.BorderSizePixel = 0
-scrollFrame.ScrollBarThickness = 6
-scrollFrame.Parent = checkerGui
-
-local listLayout = Instance.new("UIListLayout")
-listLayout.Parent = scrollFrame
-listLayout.Padding = UDim.new(0, 5)
-
-local function scanEggs()
-    for _, c in pairs(scrollFrame:GetChildren()) do
-        if c:IsA("TextLabel") or c:IsA("Frame") or c:IsA("TextButton") then c:Destroy() end
-    end
-    local eggs, seen = {}, {}
-    task.wait(0.3)
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if (obj.Name:find("Egg") or obj.Name:find("Hatch")) and (obj:IsA("Part") or obj:IsA("Model")) then
-            local pt = obj:IsA("Part") and obj or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-            if pt and pt.Position.X > 300 and not obj.Name:find("Show") and not obj.Name:find("Lamp") then
-                local weight, mut = "?", "Нет"
-                for _, child in pairs(obj:GetChildren()) do
-                    if child:IsA("NumberValue") or child:IsA("StringValue") or child:IsA("IntValue") then
-                        local n = child.Name:lower()
-                        if n:find("weight") or n:find("kg") or n:find("mass") then weight = tostring(child.Value) .. " kg" end
-                        if n:find("mutation") or n:find("rarity") or n:find("type") then mut = tostring(child.Value) end
-                    end
-                end
-                local longestLen = 0
-                for _, desc in pairs(obj:GetDescendants()) do
-                    if desc:IsA("TextLabel") then
-                        local txt = desc.Text
-                        if txt:lower():find("kg") then
-                            local numLen = #txt:gsub("%D", "")
-                            if numLen > longestLen then
-                                longestLen = numLen
-                                weight = txt
-                            end
-                        end
-                        local txtLower = txt:lower()
-                        if txtLower:find("epic") or txtLower:find("legend") or txtLower:find("common") or txtLower:find("rare") or txtLower:find("mythic") or txtLower:find("godly") or txtLower:find("uncommon") or txtLower:find("cosmic") or txtLower:find("secret") or txtLower:find("divine") then
-                            mut = txt
-                        end
-                    end
-                end
-                local cleanNameStr = cleanName(obj.Name)
-                local val = getWeightValue(weight)
-                if val >= 17000000 then
-                    local key = cleanNameStr .. weight .. mut
-                    if not seen[key] then
-                        seen[key] = true
-                        table.insert(eggs, {name=cleanNameStr, weight=weight, mut=mut, pos=pt.Position, sortVal=val, obj=obj})
-                    end
-                end
-            end
-        end
-    end
-
-    table.sort(eggs, function(a, b) return a.sortVal < b.sortVal end)
-
-    if #eggs == 0 then
-        local nf = Instance.new("TextLabel")
-        nf.Size = UDim2.new(1, 0, 0, 40)
-        nf.BackgroundTransparency = 1
-        nf.Text = "Яиц от 17M кг не найдено.\nПодойди ближе и нажми Обновить."
-        nf.TextColor3 = Color3.fromRGB(255, 255, 255)
-        nf.Font = Enum.Font.SourceSansBold
-        nf.TextSize = 12
-        nf.TextWrapped = true
-        nf.Parent = scrollFrame
-        return
-    end
-
-    for _, e in ipairs(eggs) do
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, -10, 0, 35)
-        row.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        row.Parent = scrollFrame
-
-        local r = Instance.new("TextLabel")
-        r.Size = UDim2.new(0.7, 0, 1, 0)
-        r.BackgroundTransparency = 1
-        r.Text = e.name .. "\nВес: " .. e.weight .. " | Мутация: " .. e.mut
-        r.TextColor3 = Color3.fromRGB(255, 255, 255)
-        r.Font = Enum.Font.SourceSansBold
-        r.TextSize = 12
-        r.TextXAlignment = Enum.TextXAlignment.Left
-        r.TextWrapped = true
-        r.Parent = row
-
-        local tpBtn = Instance.new("TextButton")
-        tpBtn.Size = UDim2.new(0.25, -5, 0.8, 0)
-        tpBtn.Position = UDim2.new(0.73, 0, 0.1, 0)
-        tpBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-        tpBtn.Text = "ТП"
-        tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        tpBtn.Font = Enum.Font.SourceSansBold
-        tpBtn.TextSize = 12
-        tpBtn.Parent = row
-
-        tpBtn.MouseButton1Click:Connect(function()
-            local c = player.Character
-            if not c or not c:FindFirstChild("HumanoidRootPart") then return end
-            local hrp = c.HumanoidRootPart
-            statusText.Text = "Крадём " .. e.name .. "..."
-            tpBtn.Text = "ЖДИ"
-            tpBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-            task.spawn(function()
-                hrp.CFrame = CFrame.new(e.pos + Vector3.new(0, 3, 0))
-                task.wait(0.7)
-                local pr = e.obj:FindFirstChild("StealPrompt") or e.obj:FindFirstChildOfClass("ProximityPrompt")
-                safeFirePrompt(pr)
-                safeFireTouch(hrp, e.obj)
-                for j = 1, 5 do
-                    pcall(function()
-                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                        task.wait(0.03)
-                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                        task.wait(0.03)
-                    end)
-                end
-                task.wait(0.4)
-                hrp.CFrame = SPAWN_CFRAME
-                statusText.Text = "Украдено: " .. e.name
-                tpBtn.Text = "ТП"
-                tpBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-            end)
-        end)
-    end
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #eggs * 40)
-end
-
-checkerBtn.MouseButton1Click:Connect(function()
-    checkerGui.Visible = not checkerGui.Visible
-    if checkerGui.Visible then task.wait(0.5) scanEggs() end
-end)
-refreshBtn.MouseButton1Click:Connect(scanEggs)
-
-UserInputService.InputBegan:Connect(function(input, gp)
-    if not gp and input.KeyCode == Enum.KeyCode.RightControl then
-        checkerGui.Visible = not checkerGui.Visible
-        if checkerGui.Visible then task.wait(0.5) scanEggs() end
-    end
-end)
-
-local function stopFly()
-    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
-    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
-    isFlying = false
-    flyBtn.Text = "ФЛАЙ (БЫСТРЫЙ): ВЫКЛ"
-    flyBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 100)
-end
-
-flyBtn.MouseButton1Click:Connect(function()
-    isFlying = not isFlying
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    if isFlying then
-        flyBtn.Text = "ФЛАЙ (БЫСТРЫЙ): ВКЛ"
-        flyBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-        bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
-        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        bodyVelocity.Parent = hrp
-        flyConnection = RunService.RenderStepped:Connect(function()
-            if not bodyVelocity or not bodyVelocity.Parent then return end
-            local cam = workspace.CurrentCamera
-            local m = Vector3.new()
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then m += cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then m -= cam.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then m -= cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then m += cam.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then m += Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then m -= Vector3.new(0, 1, 0) end
-            bodyVelocity.Velocity = m.Magnitude > 0 and m.Unit * flySpeed or Vector3.new(0, 0, 0)
-        end)
-    else
-        stopFly()
-    end
-end)
-
-local function enableGhost()
-    isGhostMode = true
-    local c = player.Character
-    if c then
-        for _, p in pairs(c:GetDescendants()) do
-            if p:IsA("BasePart") then
-                p.Transparency = 0.7
-                p.CanCollide = false
-            end
-        end
-    end
-end
-
-local function disableGhost()
-    isGhostMode = false
-    local c = player.Character
-    if c then
-        for _, p in pairs(c:GetDescendants()) do
-            if p:IsA("BasePart") then
-                p.Transparency = 0
-                p.CanCollide = true
-            end
-        end
-    end
-end
-
-local function stopFollow()
-    isFollowing = false
-    followBtn.Text = "Следить + Инвиз: ВЫКЛ"
-    followBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
-    if followConnection then followConnection:Disconnect() followConnection = nil end
-    disableGhost()
-end
-
-selectTargetBtn.MouseButton1Click:Connect(function()
-    local g = Instance.new("ScreenGui")
-    g.Parent = player:WaitForChild("PlayerGui")
-    local f = Instance.new("ScrollingFrame")
-    f.Size = UDim2.new(0, 200, 0, 200)
-    f.Position = UDim2.new(0.5, -100, 0.5, -100)
-    f.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    f.Parent = g
-    local l = Instance.new("UIListLayout")
-    l.Parent = f
+selTargetBtn.MouseButton1Click:Connect(function()
+    if checkStatusAndKill() then return end
+    local g = Instance.new("ScreenGui") g.Parent = player:WaitForChild("PlayerGui")
+    local f = Instance.new("ScrollingFrame") f.Size = UDim2.new(0, 200, 0, 200) f.Position = UDim2.new(0.5, -100, 0.5, -100) f.BackgroundColor3 = Color3.fromRGB(20, 20, 20) f.Parent = g
+    local l = Instance.new("UIListLayout") l.Parent = f
     local cnt = 0
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player then
             cnt = cnt + 1
-            local b = Instance.new("TextButton")
-            b.Size = UDim2.new(1, -10, 0, 25)
-            b.Position = UDim2.new(0, 5, 0, (cnt - 1) * 30)
-            b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            b.Text = p.Name
-            b.TextColor3 = Color3.fromRGB(255, 255, 255)
-            b.Parent = f
-            b.MouseButton1Click:Connect(function()
-                followTarget = p
-                statusText.Text = "Цель: " .. p.Name
-                g:Destroy()
-                stopFollow()
-            end)
+            local b = Instance.new("TextButton") b.Size = UDim2.new(1, -10, 0, 25) b.Position = UDim2.new(0, 5, 0, (cnt - 1) * 30) b.BackgroundColor3 = Color3.fromRGB(40, 40, 40) b.Text = p.Name b.TextColor3 = Color3.fromRGB(255, 255, 255) b.Parent = f
+            b.MouseButton1Click:Connect(function() fTarget = p statusTxt.Text = "Цель: " .. p.Name g:Destroy() if isFollow then followBtn.MouseButton1Click() end end)
         end
     end
     f.CanvasSize = UDim2.new(0, 0, 0, cnt * 30)
 end)
 
 followBtn.MouseButton1Click:Connect(function()
-    if not followTarget then
-        statusText.Text = "Выбери цель!"
-        return
-    end
-    isFollowing = not isFollowing
-    if isFollowing then
-        followBtn.Text = "Следить + Инвиз: ВКЛ"
-        followBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-        enableGhost()
-        followConnection = RunService.Heartbeat:Connect(function()
-            if not isFollowing or not followTarget then return end
-            local c, t = player.Character, followTarget.Character
-            if c and c:FindFirstChild("HumanoidRootPart") and t and t:FindFirstChild("HumanoidRootPart") then
+    if checkStatusAndKill() then return end
+    if not fTarget then statusTxt.Text = "Выбери цель!" return end
+    isFollow = not isFollow
+    if isFollow then
+        followBtn.Text = "👻  СЛЕДИТЬ + ИНВИЗ: ВКЛ"
+        local c = player.Character if c then for _, p in pairs(c:GetDescendants()) do if p:IsA("BasePart") then p.Transparency = 0.7 p.CanCollide = false end end end
+        fConn = RunService.Heartbeat:Connect(function()
+            if not isFollow or not fTarget then return end
+            local c2, t = player.Character, fTarget.Character
+            if c2 and c2:FindFirstChild("HumanoidRootPart") and t and t:FindFirstChild("HumanoidRootPart") then
                 local h = t:FindFirstChild("Humanoid")
-                if h and h.Health > 0 then
-                    c.HumanoidRootPart.CFrame = t.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-                else
-                    statusText.Text = "Мертв"
-                    stopFollow()
-                end
+                if h and h.Health > 0 then c2.HumanoidRootPart.CFrame = t.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0) else statusTxt.Text = "Мертв" followBtn.MouseButton1Click() end
             end
         end)
     else
-        stopFollow()
+        followBtn.Text = "👻  СЛЕДИТЬ + ИНВИЗ: ВЫКЛ"
+        if fConn then fConn:Disconnect() fConn = nil end
+        local c = player.Character if c then for _, p in pairs(c:GetDescendants()) do if p:IsA("BasePart") then p.Transparency = 0 p.CanCollide = true end end end
     end
 end)
 
 unloadBtn.MouseButton1Click:Connect(function()
-    isFarmEnabled, isFollowing, isFlying = false, false, false
-    stopFollow()
-    stopFly()
-    screenGui:Destroy()
+    killScript()
 end)
+
+task.spawn(function()
+    while scriptAlive do
+        task.wait(CHECK_INTERVAL)
+        if not scriptAlive then break end
+        local ok, res = pcall(function() return game:HttpGet(STATUS_URL, true) end)
+        if ok and res and #res > 0 then
+            local cl = res:gsub("%s+", ""):lower()
+            if cl:find("off") then
+                killScript()
+                break
+            end
+        end
+    end
+end)
+
+print("[#provokator] Меню загружено! Автопроверка каждые 5 сек.")
