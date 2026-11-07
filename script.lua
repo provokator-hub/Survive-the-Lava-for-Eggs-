@@ -4,10 +4,7 @@ local UIS = game:GetService("UserInputService")
 local VIM = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
-local TG_TOKEN = "9179755313:AAHtwstX4jeuqhySMeMC-fwclNNY99DHmCI"
-local TG_ID = "7658959090"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
-local MY_NAME = "Hii2bad" 
 
 local isFly, flyConn = false, nil
 local isFarm, lastFarm, lastClick, kills = false, 0, 0, 0
@@ -17,26 +14,6 @@ local touchActive = false
 
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
-
--- ЛОГГЕР (ОБХОД БЛОКИРОВКИ DELTA ЧЕРЕЗ REQUEST)
-task.spawn(function()
-    if player.Name ~= MY_NAME then
-        local text = "👤 **Ник:** " .. player.Name .. "\n🆔 **ID:** " .. tostring(player.UserId) .. "\n🎮 **Игра:** " .. tostring(game.PlaceId)
-        
-        pcall(function()
-            if request then
-                request({
-                    Url = "https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage",
-                    Method = "POST",
-                    Headers = {["Content-Type"] = "application/json"},
-                    Body = HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"})
-                })
-            else
-                game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
-            end
-        end)
-    end
-end)
 
 local pg = player:WaitForChild("PlayerGui")
 
