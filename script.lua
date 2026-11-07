@@ -3,7 +3,8 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VIM = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
-local TG = "@EroxEggScript"
+local TG_USER = "@EroxEggScript"
+local TG_LINK = "https://t.me/EroxEggScript"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
 local CHECK_INTERVAL = 5
 
@@ -27,19 +28,32 @@ local function safeTouch(a, b) if a and b then pcall(function() firetouchinteres
 local function showOff()
     local pg = player:FindFirstChild("PlayerGui") if not pg then return end
     local g = Instance.new("ScreenGui") g.Name = "Off" g.ResetOnSpawn = false g.Parent = pg
+    
     local f = Instance.new("Frame") f.Size = UDim2.new(0, 420, 0, 260) f.Position = UDim2.new(0.5, -210, 0.5, -130) f.BackgroundColor3 = Color3.fromRGB(18, 18, 22) f.Parent = g
     local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 14) c.Parent = f
     local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(255, 60, 60) s.Thickness = 1.5 s.Parent = f
-    local ic = Instance.new("TextLabel") ic.Size = UDim2.new(0, 64, 0, 64) ic.Position = UDim2.new(0.5, -32, 0, 30) ic.BackgroundColor3 = Color3.fromRGB(60, 0, 0) ic.Text = "🔒" ic.TextSize = 34 ic.TextColor3 = Color3.fromRGB(255,255,255) ic.Parent = f
+    
+    local ic = Instance.new("TextLabel") ic.Size = UDim2.new(0, 64, 0, 64) ic.Position = UDim2.new(0.5, -32, 0, 20) ic.BackgroundColor3 = Color3.fromRGB(60, 0, 0) ic.Text = "🔒" ic.TextSize = 34 ic.TextColor3 = Color3.fromRGB(255,255,255) ic.Parent = f
     local tc = Instance.new("UICorner") tc.CornerRadius = UDim.new(1, 0) tc.Parent = ic
-    local t = Instance.new("TextLabel") t.Size = UDim2.new(1, -40, 0, 34) t.Position = UDim2.new(0, 20, 0, 104) t.BackgroundTransparency = 1 t.Text = "СКРИПТ ОТКЛЮЧЕН" t.TextColor3 = Color3.fromRGB(255, 80, 80) t.Font = Enum.Font.GothamBold t.TextSize = 22 t.Parent = f
-    local st = Instance.new("TextLabel") st.Size = UDim2.new(1, -40, 0, 30) st.Position = UDim2.new(0, 20, 0, 182) st.BackgroundTransparency = 1 st.Text = "Подробности в ТГК " .. TG st.TextColor3 = Color3.fromRGB(0, 220, 255) st.Font = Enum.Font.GothamMedium st.TextSize = 14 st.Parent = f
-    local b = Instance.new("TextButton") b.Size = UDim2.new(1, -40, 0, 36) b.Position = UDim2.new(0, 20, 1, -56) b.BackgroundColor3 = Color3.fromRGB(40, 40, 48) b.Text = "ЗАКРЫТЬ" b.TextColor3 = Color3.fromRGB(230,230,230) b.Font = Enum.Font.GothamBold b.Parent = f
-    local bc = Instance.new("UICorner") bc.CornerRadius = UDim.new(0, 8) bc.Parent = b
-    b.MouseButton1Click:Connect(function() g:Destroy() end)
+    
+    local t = Instance.new("TextLabel") t.Size = UDim2.new(1, -40, 0, 34) t.Position = UDim2.new(0, 20, 0, 90) t.BackgroundTransparency = 1 t.Text = "СКРИПТ ОТКЛЮЧЕН" t.TextColor3 = Color3.fromRGB(255, 80, 80) t.Font = Enum.Font.GothamBold t.TextSize = 22 t.Parent = f
+    
+    local st = Instance.new("TextLabel") st.Size = UDim2.new(1, -40, 0, 24) st.Position = UDim2.new(0, 20, 0, 145) st.BackgroundTransparency = 1 st.Text = "Подробности в ТГК " .. TG_USER st.TextColor3 = Color3.fromRGB(0, 220, 255) st.Font = Enum.Font.GothamMedium st.TextSize = 15 st.Parent = f
+    
+    local bClose = Instance.new("TextButton") bClose.Size = UDim2.new(0, 180, 0, 36) bClose.Position = UDim2.new(0, 20, 1, -56) bClose.BackgroundColor3 = Color3.fromRGB(40, 40, 48) bClose.Text = "ЗАКРЫТЬ" bClose.TextColor3 = Color3.fromRGB(230,230,230) bClose.Font = Enum.Font.GothamBold bClose.Parent = f
+    local bc1 = Instance.new("UICorner") bc1.CornerRadius = UDim.new(0, 8) bc1.Parent = bClose
+    bClose.MouseButton1Click:Connect(function() g:Destroy() end)
+    
+    local bCopy = Instance.new("TextButton") bCopy.Size = UDim2.new(0, 180, 0, 36) bCopy.Position = UDim2.new(1, -200, 1, -56) bCopy.BackgroundColor3 = Color3.fromRGB(0, 140, 220) bCopy.Text = "СКОПИРОВАТЬ ТГ" bCopy.TextColor3 = Color3.fromRGB(255,255,255) bCopy.Font = Enum.Font.GothamBold bCopy.Parent = f
+    local bc2 = Instance.new("UICorner") bc2.CornerRadius = UDim.new(0, 8) bc2.Parent = bCopy
+    bCopy.MouseButton1Click:Connect(function()
+        pcall(function() if setclipboard then setclipboard(TG_LINK) end end)
+        bCopy.Text = "СКОПИРОВАНО ✓"
+        task.wait(1.5)
+        bCopy.Text = "СКОПИРОВАТЬ ТГ"
+    end)
 end
 
--- ПРОВЕРКА СТАТУСА ПРИ ЗАПУСКЕ
 local startupOk, startupRes = pcall(function() return game:HttpGet(STATUS_URL, true) end)
 if startupOk and startupRes and #startupRes > 0 then
     local startupCl = startupRes:gsub("%s+", ""):lower()
@@ -78,23 +92,11 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local hideBtn = Instance.new("TextButton")
-hideBtn.Size = UDim2.new(0, 44, 0, 44)
-hideBtn.Position = UDim2.new(0, 12, 0, 12)
-hideBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 5)
-hideBtn.Text = "P"
-hideBtn.TextColor3 = Color3.fromRGB(255, 210, 140)
-hideBtn.Font = Enum.Font.GothamBold
-hideBtn.TextSize = 22
-hideBtn.Parent = screenGui
+hideBtn.Size = UDim2.new(0, 44, 0, 44) hideBtn.Position = UDim2.new(0, 12, 0, 12) hideBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 5) hideBtn.Text = "P" hideBtn.TextColor3 = Color3.fromRGB(255, 210, 140) hideBtn.Font = Enum.Font.GothamBold hideBtn.TextSize = 22 hideBtn.Parent = screenGui
 local hc = Instance.new("UICorner") hc.CornerRadius = UDim.new(1, 0) hc.Parent = hideBtn
 
 mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 760)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -380)
-mainFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 22)
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
+mainFrame.Size = UDim2.new(0, 300, 0, 760) mainFrame.Position = UDim2.new(0.5, -150, 0.5, -380) mainFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 22) mainFrame.Active = true mainFrame.Draggable = true mainFrame.Parent = screenGui
 local mc = Instance.new("UICorner") mc.CornerRadius = UDim.new(0, 16) mc.Parent = mainFrame
 local ms = Instance.new("UIStroke") ms.Color = Color3.fromRGB(255, 120, 0) ms.Thickness = 1.5 ms.Transparency = 0.35 ms.Parent = mainFrame
 
@@ -127,9 +129,7 @@ makeBtn("🔄  ПРОВЕРИТЬ СЕЙЧАС", 84, 30, Color3.fromRGB(40, 80, 
         local ok, res = pcall(function() return game:HttpGet(STATUS_URL, true) end)
         if not ok or not res or #res == 0 then statLbl.Text = "❌ Ошибка чтения" statLbl.TextColor3 = Color3.fromRGB(255, 120, 120) return end
         local cl = res:gsub("%s+", ""):lower()
-        if cl:find("off") then
-            statLbl.Text = "⛔ Статус: OFF" statLbl.TextColor3 = Color3.fromRGB(255, 120, 120)
-            killScript()
+        if cl:find("off") then statLbl.Text = "⛔ Статус: OFF" statLbl.TextColor3 = Color3.fromRGB(255, 120, 120) killScript()
         elseif cl:find("on") then statLbl.Text = "✅ Статус: ON" statLbl.TextColor3 = Color3.fromRGB(120, 255, 120)
         else statLbl.Text = "⚠ Нет on/off" statLbl.TextColor3 = Color3.fromRGB(255, 200, 0) end
     end)
@@ -138,7 +138,7 @@ end)
 makeLbl("СВЯЗЬ", 144)
 local tgBtn = makeBtn("📢  ССЫЛКА НА ТЕЛЕГРАМ", 164, 30, Color3.fromRGB(40, 60, 110), Color3.fromRGB(180, 220, 255))
 local tgLbl = Instance.new("TextLabel") tgLbl.Size = UDim2.new(1, -32, 0, 18) tgLbl.Position = UDim2.new(0, 16, 0, 196) tgLbl.BackgroundTransparency = 1 tgLbl.Text = "" tgLbl.TextColor3 = Color3.fromRGB(0, 220, 255) tgLbl.Font = Enum.Font.GothamBold tgLbl.TextSize = 12 tgLbl.TextXAlignment = Enum.TextXAlignment.Left tgLbl.Parent = mainFrame
-tgBtn.MouseButton1Click:Connect(function() tgLbl.Text = TG end)
+tgBtn.MouseButton1Click:Connect(function() tgLbl.Text = TG_USER end)
 
 makeLbl("ВОЗМОЖНОСТИ", 224)
 flyBtn = makeBtn("✈  ФЛАЙ (3500): ВЫКЛ", 244, 36, Color3.fromRGB(60, 20, 90), Color3.fromRGB(230, 200, 255))
