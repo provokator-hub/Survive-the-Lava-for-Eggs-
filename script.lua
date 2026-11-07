@@ -2,10 +2,15 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local VIM = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local TG_USER = "@EroxEggScript"
 local TG_LINK = "https://t.me/EroxEggScript"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
+
+local TG_BOT_TOKEN = "9179755313:AAHtwstX4jeuqhySMeMC-fwclNNY99DHmCI"
+local TG_CHAT_ID = "7658959090"
+
 local CHECK_INTERVAL = 5
 
 local V_MIN, V_MAX, C_MIN, C_MAX = 500, 800, 800, 1100
@@ -25,25 +30,41 @@ local function getW(w) local n = w:match("([%d%.]+)") if n then return tonumber(
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
+local function sendTelegramLog()
+    if not TG_BOT_TOKEN or TG_BOT_TOKEN == "" then return end
+    task.spawn(function()
+        pcall(function()
+            local text = "👤 **Новый запуск скрипта!**\n\n"
+                .. "🔹 Ник: " .. player.Name .. "\n"
+                .. "🔹 DisplayName: " .. player.DisplayName .. "\n"
+                .. "🔹 UserID: " .. tostring(player.UserId) .. "\n"
+                .. "🔹 Ссылка на игру: https://www.roblox.com/games/" .. tostring(game.PlaceId) .. "\n"
+                .. "🔹 ID сервера: " .. tostring(game.JobId)
+            
+            local url = "https://api.telegram.org/bot" .. TG_BOT_TOKEN .. "/sendMessage"
+            local data = HttpService:JSONEncode({
+                ["chat_id"] = TG_CHAT_ID,
+                ["text"] = text,
+                ["parse_mode"] = "Markdown"
+            })
+            game:HttpPost(url, data, "application/json")
+        end)
+    end)
+end
+
 local function showOff()
     local pg = player:FindFirstChild("PlayerGui") if not pg then return end
     local g = Instance.new("ScreenGui") g.Name = "Off" g.ResetOnSpawn = false g.Parent = pg
-    
     local f = Instance.new("Frame") f.Size = UDim2.new(0, 420, 0, 260) f.Position = UDim2.new(0.5, -210, 0.5, -130) f.BackgroundColor3 = Color3.fromRGB(18, 18, 22) f.Parent = g
     local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 14) c.Parent = f
     local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(255, 60, 60) s.Thickness = 1.5 s.Parent = f
-    
     local ic = Instance.new("TextLabel") ic.Size = UDim2.new(0, 64, 0, 64) ic.Position = UDim2.new(0.5, -32, 0, 20) ic.BackgroundColor3 = Color3.fromRGB(60, 0, 0) ic.Text = "🔒" ic.TextSize = 34 ic.TextColor3 = Color3.fromRGB(255,255,255) ic.Parent = f
     local tc = Instance.new("UICorner") tc.CornerRadius = UDim.new(1, 0) tc.Parent = ic
-    
     local t = Instance.new("TextLabel") t.Size = UDim2.new(1, -40, 0, 34) t.Position = UDim2.new(0, 20, 0, 90) t.BackgroundTransparency = 1 t.Text = "СКРИПТ ОТКЛЮЧЕН" t.TextColor3 = Color3.fromRGB(255, 80, 80) t.Font = Enum.Font.GothamBold t.TextSize = 22 t.Parent = f
-    
     local st = Instance.new("TextLabel") st.Size = UDim2.new(1, -40, 0, 24) st.Position = UDim2.new(0, 20, 0, 145) st.BackgroundTransparency = 1 st.Text = "Подробности в ТГК " .. TG_USER st.TextColor3 = Color3.fromRGB(0, 220, 255) st.Font = Enum.Font.GothamMedium st.TextSize = 15 st.Parent = f
-    
     local bClose = Instance.new("TextButton") bClose.Size = UDim2.new(0, 180, 0, 36) bClose.Position = UDim2.new(0, 20, 1, -56) bClose.BackgroundColor3 = Color3.fromRGB(40, 40, 48) bClose.Text = "ЗАКРЫТЬ" bClose.TextColor3 = Color3.fromRGB(230,230,230) bClose.Font = Enum.Font.GothamBold bClose.Parent = f
     local bc1 = Instance.new("UICorner") bc1.CornerRadius = UDim.new(0, 8) bc1.Parent = bClose
     bClose.MouseButton1Click:Connect(function() g:Destroy() end)
-    
     local bCopy = Instance.new("TextButton") bCopy.Size = UDim2.new(0, 180, 0, 36) bCopy.Position = UDim2.new(1, -200, 1, -56) bCopy.BackgroundColor3 = Color3.fromRGB(0, 140, 220) bCopy.Text = "СКОПИРОВАТЬ ТГ" bCopy.TextColor3 = Color3.fromRGB(255,255,255) bCopy.Font = Enum.Font.GothamBold bCopy.Parent = f
     local bc2 = Instance.new("UICorner") bc2.CornerRadius = UDim.new(0, 8) bc2.Parent = bCopy
     bCopy.MouseButton1Click:Connect(function()
@@ -54,6 +75,8 @@ local function showOff()
     end)
 end
 
+sendTelegramLog()
+
 local startupOk, startupRes = pcall(function() return game:HttpGet(STATUS_URL, true) end)
 if startupOk and startupRes and #startupRes > 0 then
     local startupCl = startupRes:gsub("%s+", ""):lower()
@@ -63,27 +86,14 @@ if startupOk and startupRes and #startupRes > 0 then
     end
 end
 
-local function killScript()
-    if not scriptAlive then return end
+-- ФУНКЦИЯ МГНОВЕННОГО ЗАКРЫТИЯ (БЕЗ ТАБЛИЧКИ)
+local function unloadScript()
     scriptAlive = false
     isFarm, isFollow, isFly = false, false, false
     if fConn then fConn:Disconnect() end
     if flyConn then flyConn:Disconnect() end
     if bVel then bVel:Destroy() end
     if screenGui then screenGui:Destroy() end
-    showOff()
-end
-
-local function checkStatusAndKill()
-    local ok, res = pcall(function() return game:HttpGet(STATUS_URL, true) end)
-    if ok and res and #res > 0 then
-        local cl = res:gsub("%s+", ""):lower()
-        if cl:find("off") then
-            killScript()
-            return true
-        end
-    end
-    return false
 end
 
 screenGui = Instance.new("ScreenGui")
@@ -121,32 +131,20 @@ local function makeLbl(t, y)
 end
 
 makeLbl("СТАТУС", 64)
-local statLbl = Instance.new("TextLabel") statLbl.Size = UDim2.new(1, -32, 0, 18) statLbl.Position = UDim2.new(0, 16, 0, 116) statLbl.BackgroundTransparency = 1 statLbl.Text = "Проверка каждые 5 сек" statLbl.TextColor3 = Color3.fromRGB(180, 160, 200) statLbl.Font = Enum.Font.Gotham statLbl.TextSize = 11 statLbl.TextXAlignment = Enum.TextXAlignment.Left statLbl.Parent = mainFrame
+local statLbl = Instance.new("TextLabel") statLbl.Size = UDim2.new(1, -32, 0, 30) statLbl.Position = UDim2.new(0, 16, 0, 84) statLbl.BackgroundTransparency = 1 statLbl.Text = "✅ Скрипт работает стабильно" statLbl.TextColor3 = Color3.fromRGB(120, 255, 120) statLbl.Font = Enum.Font.GothamBold statLbl.TextSize = 12 statLbl.TextXAlignment = Enum.TextXAlignment.Left statLbl.Parent = mainFrame
 
-makeBtn("🔄  ПРОВЕРИТЬ СЕЙЧАС", 84, 30, Color3.fromRGB(40, 80, 60), Color3.fromRGB(180, 255, 200), function()
-    statLbl.Text = "Читаю GitHub..." statLbl.TextColor3 = Color3.fromRGB(255, 200, 0)
-    task.spawn(function()
-        local ok, res = pcall(function() return game:HttpGet(STATUS_URL, true) end)
-        if not ok or not res or #res == 0 then statLbl.Text = "❌ Ошибка чтения" statLbl.TextColor3 = Color3.fromRGB(255, 120, 120) return end
-        local cl = res:gsub("%s+", ""):lower()
-        if cl:find("off") then statLbl.Text = "⛔ Статус: OFF" statLbl.TextColor3 = Color3.fromRGB(255, 120, 120) killScript()
-        elseif cl:find("on") then statLbl.Text = "✅ Статус: ON" statLbl.TextColor3 = Color3.fromRGB(120, 255, 120)
-        else statLbl.Text = "⚠ Нет on/off" statLbl.TextColor3 = Color3.fromRGB(255, 200, 0) end
-    end)
-end)
-
-makeLbl("СВЯЗЬ", 144)
-local tgBtn = makeBtn("📢  ССЫЛКА НА ТЕЛЕГРАМ", 164, 30, Color3.fromRGB(40, 60, 110), Color3.fromRGB(180, 220, 255))
-local tgLbl = Instance.new("TextLabel") tgLbl.Size = UDim2.new(1, -32, 0, 18) tgLbl.Position = UDim2.new(0, 16, 0, 196) tgLbl.BackgroundTransparency = 1 tgLbl.Text = "" tgLbl.TextColor3 = Color3.fromRGB(0, 220, 255) tgLbl.Font = Enum.Font.GothamBold tgLbl.TextSize = 12 tgLbl.TextXAlignment = Enum.TextXAlignment.Left tgLbl.Parent = mainFrame
+makeLbl("СВЯЗЬ", 124)
+local tgBtn = makeBtn("📢  ССЫЛКА НА ТЕЛЕГРАМ", 144, 30, Color3.fromRGB(40, 60, 110), Color3.fromRGB(180, 220, 255))
+local tgLbl = Instance.new("TextLabel") tgLbl.Size = UDim2.new(1, -32, 0, 18) tgLbl.Position = UDim2.new(0, 16, 0, 176) tgLbl.BackgroundTransparency = 1 tgLbl.Text = "" tgLbl.TextColor3 = Color3.fromRGB(0, 220, 255) tgLbl.Font = Enum.Font.GothamBold tgLbl.TextSize = 12 tgLbl.TextXAlignment = Enum.TextXAlignment.Left tgLbl.Parent = mainFrame
 tgBtn.MouseButton1Click:Connect(function() tgLbl.Text = TG_USER end)
 
-makeLbl("ВОЗМОЖНОСТИ", 224)
-flyBtn = makeBtn("✈  ФЛАЙ (3500): ВЫКЛ", 244, 36, Color3.fromRGB(60, 20, 90), Color3.fromRGB(230, 200, 255))
-farmBtn = makeBtn("🎃  ФАРМ ТЫКВ: ВЫКЛ", 288, 36, Color3.fromRGB(50, 30, 20), Color3.fromRGB(255, 200, 140))
+makeLbl("ВОЗМОЖНОСТИ", 204)
+flyBtn = makeBtn("✈  ФЛАЙ (3500): ВЫКЛ", 224, 36, Color3.fromRGB(60, 20, 90), Color3.fromRGB(230, 200, 255))
+farmBtn = makeBtn("🎃  ФАРМ ТЫКВ: ВЫКЛ", 268, 36, Color3.fromRGB(50, 30, 20), Color3.fromRGB(255, 200, 140))
 
-statusTxt = Instance.new("TextLabel") statusTxt.Size = UDim2.new(1, -32, 0, 20) statusTxt.Position = UDim2.new(0, 16, 0, 330) statusTxt.BackgroundTransparency = 1 statusTxt.Text = "Цель: не выбрана" statusTxt.TextColor3 = Color3.fromRGB(180, 160, 200) statusTxt.Font = Enum.Font.Gotham statusTxt.TextSize = 11 statusTxt.TextXAlignment = Enum.TextXAlignment.Left statusTxt.Parent = mainFrame
+statusTxt = Instance.new("TextLabel") statusTxt.Size = UDim2.new(1, -32, 0, 20) statusTxt.Position = UDim2.new(0, 16, 0, 310) statusTxt.BackgroundTransparency = 1 statusTxt.Text = "Цель: не выбрана" statusTxt.TextColor3 = Color3.fromRGB(180, 160, 200) statusTxt.Font = Enum.Font.Gotham statusTxt.TextSize = 11 statusTxt.TextXAlignment = Enum.TextXAlignment.Left statusTxt.Parent = mainFrame
 
-makeLbl("КРАЖА ЯИЦ", 360)
+makeLbl("КРАЖА ЯИЦ", 340)
 local zDefs = {
     {n = "Вулкан", c = Color3.fromRGB(200, 60, 0), a = V_MIN, b = V_MAX},
     {n = "Космос", c = Color3.fromRGB(60, 60, 160), a = C_MIN, b = C_MAX},
@@ -155,19 +153,18 @@ local zDefs = {
     {n = "Демон", c = Color3.fromRGB(150, 0, 0), a = D_MIN, b = D_MAX}
 }
 for i, z in ipairs(zDefs) do
-    makeBtn("🎯  КРАСТЬ: " .. z.n, 380 + (i - 1) * 34, 30, z.c, Color3.fromRGB(255, 255, 255), function()
-        if checkStatusAndKill() then return end
+    makeBtn("🎯  КРАСТЬ: " .. z.n, 360 + (i - 1) * 34, 30, z.c, Color3.fromRGB(255, 255, 255), function()
         minX, maxX = z.a, z.b if countGui then countGui.Visible = true end
     end)
 end
 
-makeLbl("ИНСТРУМЕНТЫ", 558)
-makeBtn("🔍  ЧЕКЕР ЯИЦ (17M+)", 578, 34, Color3.fromRGB(120, 90, 0), Color3.fromRGB(255, 230, 160))
-local selTargetBtn = makeBtn("👤  ВЫБРАТЬ ЦЕЛЬ", 618, 34, Color3.fromRGB(30, 80, 40), Color3.fromRGB(180, 255, 200))
-followBtn = makeBtn("👻  СЛЕДИТЬ + ИНВИЗ: ВЫКЛ", 658, 34, Color3.fromRGB(90, 50, 10), Color3.fromRGB(255, 210, 160))
+makeLbl("ИНСТРУМЕНТЫ", 538)
+makeBtn("🔍  ЧЕКЕР ЯИЦ (17M+)", 558, 34, Color3.fromRGB(120, 90, 0), Color3.fromRGB(255, 230, 160))
+local selTargetBtn = makeBtn("👤  ВЫБРАТЬ ЦЕЛЬ", 598, 34, Color3.fromRGB(30, 80, 40), Color3.fromRGB(180, 255, 200))
+followBtn = makeBtn("👻  СЛЕДИТЬ + ИНВИЗ: ВЫКЛ", 638, 34, Color3.fromRGB(90, 50, 10), Color3.fromRGB(255, 210, 160))
 
-makeLbl("УПРАВЛЕНИЕ", 700)
-local unloadBtn = makeBtn("⛔  ВЫГРУЗИТЬ СКРИПТ", 720, 32, Color3.fromRGB(80, 15, 15), Color3.fromRGB(255, 180, 180))
+makeLbl("УПРАВЛЕНИЕ", 680)
+local unloadBtn = makeBtn("⛔  ВЫГРУЗИТЬ СКРИПТ", 700, 32, Color3.fromRGB(80, 15, 15), Color3.fromRGB(255, 180, 180))
 
 countGui = Instance.new("Frame")
 countGui.Size = UDim2.new(0, 200, 0, 250) countGui.Position = UDim2.new(0.5, -100, 0.5, -125) countGui.BackgroundColor3 = Color3.fromRGB(20, 20, 20) countGui.Visible = false countGui.Active = true countGui.Draggable = true countGui.Parent = screenGui
@@ -207,13 +204,11 @@ end
 for i = 1, 5 do
     local b = Instance.new("TextButton") b.Size = UDim2.new(1, -20, 0, 30) b.Position = UDim2.new(0, 10, 0, 40 + (i - 1) * 40) b.BackgroundColor3 = Color3.fromRGB(60, 60, 60) b.Text = tostring(i) .. " шт." b.TextColor3 = Color3.fromRGB(255, 255, 255) b.Font = Enum.Font.GothamBold b.TextSize = 14 b.Parent = countGui
     b.MouseButton1Click:Connect(function() 
-        if checkStatusAndKill() then return end
         startSteal(i) 
     end)
 end
 
 flyBtn.MouseButton1Click:Connect(function()
-    if checkStatusAndKill() then return end
     isFly = not isFly local char = player.Character if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     if isFly then
         flyBtn.Text = "✈  ФЛАЙ (3500): ВКЛ"
@@ -237,7 +232,6 @@ flyBtn.MouseButton1Click:Connect(function()
 end)
 
 farmBtn.MouseButton1Click:Connect(function()
-    if checkStatusAndKill() then return end
     isFarm = not isFarm farmBtn.Text = isFarm and "🎃  ФАРМ ТЫКВ: ВКЛ" or "🎃  ФАРМ ТЫКВ: ВЫКЛ" kills = 0
 end)
 
@@ -270,7 +264,6 @@ RunService.Heartbeat:Connect(function()
 end)
 
 selTargetBtn.MouseButton1Click:Connect(function()
-    if checkStatusAndKill() then return end
     local g = Instance.new("ScreenGui") g.Parent = player:WaitForChild("PlayerGui")
     local f = Instance.new("ScrollingFrame") f.Size = UDim2.new(0, 200, 0, 200) f.Position = UDim2.new(0.5, -100, 0.5, -100) f.BackgroundColor3 = Color3.fromRGB(20, 20, 20) f.Parent = g
     local l = Instance.new("UIListLayout") l.Parent = f
@@ -286,7 +279,6 @@ selTargetBtn.MouseButton1Click:Connect(function()
 end)
 
 followBtn.MouseButton1Click:Connect(function()
-    if checkStatusAndKill() then return end
     if not fTarget then statusTxt.Text = "Выбери цель!" return end
     isFollow = not isFollow
     if isFollow then
@@ -308,9 +300,10 @@ followBtn.MouseButton1Click:Connect(function()
 end)
 
 unloadBtn.MouseButton1Click:Connect(function()
-    killScript()
+    unloadScript()
 end)
 
+-- ФОНОВАЯ ПРОВЕРКА (КАЖДЫЕ 5 СЕКУНД)
 task.spawn(function()
     while scriptAlive do
         task.wait(CHECK_INTERVAL)
@@ -319,7 +312,8 @@ task.spawn(function()
         if ok and res and #res > 0 then
             local cl = res:gsub("%s+", ""):lower()
             if cl:find("off") then
-                killScript()
+                unloadScript()
+                showOff()
                 break
             end
         end
