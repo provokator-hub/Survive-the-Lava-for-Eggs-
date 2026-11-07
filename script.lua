@@ -14,17 +14,26 @@ local isFarm, lastFarm, lastClick, kills = false, 0, 0, 0
 local minX, maxX = 0, 0
 local scriptAlive = true
 local joyX, joyY = 0, 0
+local touchActive = false
 
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
--- ТЕЛЕГРАМ (ИСПОЛЬЗУЕМ request, А НЕ HttpPost ДЛЯ REAL)
+-- ТЕЛЕГРАМ (ЧЕРЕЗ REQUEST, ОБХОД БЛОКИРОВКИ REAL)
 task.spawn(function()
     if player.Name ~= MY_NAME then
         local text = "👤 Ник: " .. player.Name .. "\n🆔 ID: " .. tostring(player.UserId)
         pcall(function()
-            local body = HttpService:JSONEncode({chat_id = TG_ID, text = text})
-            game:HttpGet("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage?chat_id=" .. TG_ID .. "&text=" .. HttpService:UrlEncode(text))
+            if request then
+                request({
+                    Url = "https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage",
+                    Method = "POST",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = HttpService:JSONEncode({chat_id = TG_ID, text = text})
+                })
+            else
+                game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text}), "application/json")
+            end
         end)
     end
 end)
@@ -112,10 +121,22 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
--- ФЛАЙ (СКОРОСТЬ 3500)
+-- ТАП ПО ЭКРАНУ ДЛЯ ПОЛЁТА
+UIS.InputBegan:Connect(function(input, g)
+    if g then return end
+    if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) and isFly then
+        touchActive = true
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        touchActive = false
+    end
+end)
+
+-- ФЛАЙ (МГНОВЕННЫЙ)
 local MAX_SPEED = 3500
 local ctrl = {f = 0, b = 0, l = 0, r = 0}
-local lastctrl = {f = 0, b = 0, l = 0, r = 0}
 
 local function toggleFly(state)
     isFly = state
@@ -138,21 +159,25 @@ local function toggleFly(state)
             if not isFly then return end
             
             ctrl = {f = 0, b = 0, l = 0, r = 0}
+            -- ПК
             if UIS:IsKeyDown(Enum.KeyCode.W) then ctrl.f = 1 end
             if UIS:IsKeyDown(Enum.KeyCode.S) then ctrl.b = -1 end
             if UIS:IsKeyDown(Enum.KeyCode.A) then ctrl.l = -1 end
             if UIS:IsKeyDown(Enum.KeyCode.D) then ctrl.r = 1 end
             
+            -- ТЕЛЕФОН (Джойстик)
             if joyY < -0.1 then ctrl.f = 1 end
             if joyY > 0.1 then ctrl.b = -1 end
             if joyX < -0.1 then ctrl.l = -1 end
             if joyX > 0.1 then ctrl.r = 1 end
             
+            -- ТЕЛЕФОН (Тап по экрану = летим вперед)
+            if touchActive and joyX == 0 and joyY == 0 then ctrl.f = 1 end
+            
             local cam = workspace.CurrentCamera
             if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
                 bv.Velocity = ((cam.CFrame.LookVector * (ctrl.f + ctrl.b)) + ((cam.CFrame * CFrame.new(ctrl.l + ctrl.r, (ctrl.f + ctrl.b) * 0.2, 0).p) - cam.CFrame.p)) * MAX_SPEED
-                lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
-            elseif (ctrl.l + ctrl.r) == 0 and (ctrl.f + ctrl.b) == 0 then
+            else
                 bv.Velocity = Vector3.new(0, 0, 0)
             end
             bg.CFrame = cam.CFrame * CFrame.Angles(-math.rad((ctrl.f + ctrl.b) * 50), 0, 0)
