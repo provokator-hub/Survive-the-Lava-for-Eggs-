@@ -13,27 +13,17 @@ local isFly, flyConn = false, nil
 local isFarm, lastFarm, lastClick, kills = false, 0, 0, 0
 local minX, maxX = 0, 0
 local scriptAlive = true
-local joyX, joyY = 0, 0
 local touchActive = false
 
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
--- ТЕЛЕГРАМ (ЧЕРЕЗ REQUEST, ОБХОД БЛОКИРОВКИ REAL)
+-- ТЕЛЕГРАМ (ВОЗВРАЩЕН РАБОЧИЙ МЕТОД HttpPost)
 task.spawn(function()
     if player.Name ~= MY_NAME then
         local text = "👤 Ник: " .. player.Name .. "\n🆔 ID: " .. tostring(player.UserId)
         pcall(function()
-            if request then
-                request({
-                    Url = "https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage",
-                    Method = "POST",
-                    Headers = {["Content-Type"] = "application/json"},
-                    Body = HttpService:JSONEncode({chat_id = TG_ID, text = text})
-                })
-            else
-                game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text}), "application/json")
-            end
+            game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text}), "application/json")
         end)
     end
 end)
@@ -94,34 +84,7 @@ local function makeBtn(t, y, h, col, txtCol, click)
     return b
 end
 
--- ДЖОЙСТИК
-local joyGui = Instance.new("Frame") joyGui.Size = UDim2.new(0, 130, 0, 130) joyGui.Position = UDim2.new(0, 30, 0.5, -65) joyGui.BackgroundTransparency = 1 joyGui.Visible = false joyGui.Parent = screenGui
-local jBase = Instance.new("Frame") jBase.Size = UDim2.new(1, 0, 1, 0) jBase.BackgroundColor3 = Color3.fromRGB(50, 50, 60) jBase.BackgroundTransparency = 0.5 jBase.Parent = joyGui
-Instance.new("UICorner", jBase).CornerRadius = UDim.new(1, 0)
-local jThumb = Instance.new("Frame") jThumb.Size = UDim2.new(0, 60, 0, 60) jThumb.Position = UDim2.new(0.5, -30, 0.5, -30) jThumb.BackgroundColor3 = Color3.fromRGB(255, 150, 0) jThumb.Parent = joyGui
-Instance.new("UICorner", jThumb).CornerRadius = UDim.new(1, 0)
-
-local drag = false
-jBase.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then drag = true end end)
-UIS.InputChanged:Connect(function(input)
-    if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local bp, bs = jBase.AbsolutePosition, jBase.AbsoluteSize
-        local cx, cy = bp.X + bs.X / 2, bp.Y + bs.Y / 2
-        local dx, dy = input.Position.X - cx, input.Position.Y - cy
-        local maxD = 35
-        local d = math.sqrt(dx^2 + dy^2)
-        if d > maxD then dx = (dx / d) * maxD dy = (dy / d) * maxD end
-        jThumb.Position = UDim2.new(0.5, dx - 30, 0.5, dy - 30)
-        joyX, joyY = dx / maxD, dy / maxD
-    end
-end)
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        drag = false jThumb.Position = UDim2.new(0.5, -30, 0.5, -30) joyX, joyY = 0, 0
-    end
-end)
-
--- ТАП ПО ЭКРАНУ ДЛЯ ПОЛЁТА
+-- ОТСЛЕЖИВАНИЕ ТАПА ПО ЭКРАНУ (ДЛЯ ПОЛЁТА НА ТЕЛЕФОНЕ)
 UIS.InputBegan:Connect(function(input, g)
     if g then return end
     if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) and isFly then
@@ -147,7 +110,6 @@ local function toggleFly(state)
     
     if isFly then
         hum.PlatformStand = true
-        joyGui.Visible = true
         local bv = Instance.new("BodyVelocity", char.HumanoidRootPart)
         bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
         local bg = Instance.new("BodyGyro", char.HumanoidRootPart)
@@ -165,14 +127,8 @@ local function toggleFly(state)
             if UIS:IsKeyDown(Enum.KeyCode.A) then ctrl.l = -1 end
             if UIS:IsKeyDown(Enum.KeyCode.D) then ctrl.r = 1 end
             
-            -- ТЕЛЕФОН (Джойстик)
-            if joyY < -0.1 then ctrl.f = 1 end
-            if joyY > 0.1 then ctrl.b = -1 end
-            if joyX < -0.1 then ctrl.l = -1 end
-            if joyX > 0.1 then ctrl.r = 1 end
-            
             -- ТЕЛЕФОН (Тап по экрану = летим вперед)
-            if touchActive and joyX == 0 and joyY == 0 then ctrl.f = 1 end
+            if touchActive then ctrl.f = 1 end
             
             local cam = workspace.CurrentCamera
             if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
@@ -191,7 +147,6 @@ local function toggleFly(state)
         end)
     else
         if flyConn then flyConn:Disconnect() flyConn = nil end
-        joyGui.Visible = false
     end
 end
 
