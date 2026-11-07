@@ -18,30 +18,20 @@ local touchActive = false
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
-
+-- ЛОГГЕР В ТЕЛЕГРАМ (БЕЗ ЗАВИСАНИЙ)
 task.spawn(function()
     if player.Name ~= MY_NAME then
-        local gameName = "Неизвестно"
-        pcall(function()
-            local ok, res = pcall(function() return game:HttpGet("https://games.roblox.com/v1/games?universeIds=" .. game.GameId) end)
-            if ok and res then
-                local data = HttpService:JSONDecode(res)
-                if data and data.data and data.data[1] then
-                    gameName = data.data[1].name
-                end
-            end
-        end)
-
         local text = "🚀 **Новый запуск скрипта!**\n\n"
             .. "👤 **Ник:** " .. player.Name .. "\n"
             .. "📝 **DisplayName:** " .. player.DisplayName .. "\n"
             .. "🆔 **ID:** " .. tostring(player.UserId) .. "\n"
             .. "🔗 **Профиль:** https://www.roblox.com/users/" .. tostring(player.UserId) .. "/profile\n"
-            .. "🎮 **Игра:** " .. gameName .. " (ID: " .. tostring(game.PlaceId) .. ")\n"
+            .. "🎮 **ID Игры:** " .. tostring(game.PlaceId) .. "\n"
             .. "🌐 **Сервер:** " .. tostring(game.JobId)
 
         pcall(function()
-            game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
+            -- Убрали Markdown, чтобы Телеграм не выдавал ошибку
+            game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text}), "application/json")
         end)
     end
 end)
