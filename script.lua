@@ -17,14 +17,25 @@ local function safeTouch(a, b) if a and b then pcall(function() firetouchinteres
 
 local pg = player:WaitForChild("PlayerGui")
 
+-- ГЛОБАЛЬНЫЙ ФАСТ Е (УБИРАЕТ ЗАДЕРЖКУ У ВСЕХ КНОПОК)
+task.spawn(function()
+    while scriptAlive do
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") then
+                obj.HoldDuration = 0
+            end
+        end
+        task.wait(2)
+    end
+end)
+
 -- АНИМАЦИЯ
 local intro = Instance.new("ScreenGui")
 intro.IgnoreGuiInset = true intro.DisplayOrder = 999 intro.Parent = pg
-local blur = Instance.new("BlurEffect") blur.Size = 0 blur.Parent = game:GetService("Lighting")
 local bg = Instance.new("Frame") bg.Size = UDim2.new(1,0,1,0) bg.BackgroundColor3 = Color3.fromRGB(5, 5, 10) bg.BackgroundTransparency = 1 bg.Parent = intro
 
 local emojis = {"🎃", "🦇", "👻"}
-for i = 1, 25 do
+for i = 1, 15 do
     local e = Instance.new("TextLabel")
     e.Size = UDim2.new(0, 60, 0, 60) e.BackgroundTransparency = 1 e.Text = emojis[math.random(1, #emojis)] e.TextSize = math.random(40, 60) e.TextTransparency = 1
     e.Position = UDim2.new(math.random(5, 95)/100, 0, math.random(5, 95)/100, 0) e.Parent = intro
@@ -33,18 +44,18 @@ end
 local txt = Instance.new("TextLabel") 
 txt.Size = UDim2.new(1,0,0,100) txt.Position = UDim2.new(0,0,0.5,-50) txt.BackgroundTransparency = 1 txt.Text = "Привет, " .. player.DisplayName .. "!" txt.TextColor3 = Color3.fromRGB(255, 180, 80) txt.Font = Enum.Font.GothamBlack txt.TextSize = 45 txt.TextTransparency = 1 txt.Parent = intro
 
-for i = 1, 0, -0.02 do
-    bg.BackgroundTransparency = 0.1 + (i * 0.6) blur.Size = (1 - i) * 10 txt.TextTransparency = i
+for i = 1, 0, -0.04 do
+    bg.BackgroundTransparency = 0.1 + (i * 0.6) txt.TextTransparency = i
     for _, e in pairs(intro:GetChildren()) do if e:IsA("TextLabel") and e ~= txt then e.TextTransparency = i end end
     task.wait(0.01)
 end
-task.wait(2)
-for i = 0, 1, 0.02 do
-    bg.BackgroundTransparency = 0.7 + (i * 0.3) blur.Size = i * 10 txt.TextTransparency = i 
+task.wait(1.5)
+for i = 0, 1, 0.04 do
+    bg.BackgroundTransparency = 0.7 + (i * 0.3) txt.TextTransparency = i 
     for _, e in pairs(intro:GetChildren()) do if e:IsA("TextLabel") and e ~= txt then e.TextTransparency = i end end
     task.wait(0.01)
 end
-intro:Destroy() blur:Destroy()
+intro:Destroy()
 
 -- МЕНЮ
 local screenGui = Instance.new("ScreenGui")
@@ -103,7 +114,7 @@ local function toggleFly(state)
         bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
         bg.CFrame = char.HumanoidRootPart.CFrame
         
-        flyConn = RunService.RenderStepped:Connect(function()
+        flyConn = RunService.Heartbeat:Connect(function()
             if not isFly then return end
             ctrl = {f = 0, b = 0, l = 0, r = 0}
             if UIS:IsKeyDown(Enum.KeyCode.W) then ctrl.f = 1 end
@@ -175,10 +186,13 @@ local cT = Instance.new("TextLabel") cT.Size = UDim2.new(1, 0, 0, 30) cT.Backgro
 local cC = Instance.new("TextButton") cC.Size = UDim2.new(0, 25, 0, 25) cC.Position = UDim2.new(1, -30, 0, 5) cC.BackgroundTransparency = 1 cC.Text = "X" cC.TextColor3 = Color3.fromRGB(255, 50, 50) cC.Font = Enum.Font.GothamBold cC.TextSize = 18 cC.Parent = countGui
 cC.MouseButton1Click:Connect(function() countGui.Visible = false end)
 
+-- БЫСТРАЯ КРАЖА (0.15 СЕК)
 local function startSteal(num)
     countGui.Visible = false
     local c = player.Character if not c or not c:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = c.HumanoidRootPart
     local eggs = {}
+    
     for _, o in pairs(workspace:GetDescendants()) do
         if (o.Name:find("Egg") or o.Name:find("Hatch")) and (o:IsA("Part") or o:IsA("Model")) then
             local pt = o:IsA("Part") and o or o.PrimaryPart or o:FindFirstChildWhichIsA("BasePart")
@@ -188,16 +202,24 @@ local function startSteal(num)
             end
         end
     end
+    
     if #eggs == 0 then return end
+    
     task.spawn(function()
         for i = 1, math.min(num, #eggs) do
             local e = eggs[i]
-            c.HumanoidRootPart.CFrame = CFrame.new(e.p.Position + Vector3.new(0, 3, 0))
-            task.wait(0.5) safePrompt(e.r) safeTouch(c.HumanoidRootPart, e.p)
-            for j = 1, 5 do pcall(function() VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game) task.wait(0.03) VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game) task.wait(0.03) end) end
-            task.wait(0.5)
+            hrp.CFrame = CFrame.new(e.p.Position + Vector3.new(0, 3, 0))
+            task.wait(0.15) 
+            pcall(function() e.r.HoldDuration = 0 end)
+            safePrompt(e.r) 
+            safeTouch(hrp, e.p)
+            pcall(function() 
+                VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                task.wait(0.02)
+                VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game) 
+            end)
         end
-        c.HumanoidRootPart.CFrame = CFrame.new(0, 10, 0)
+        hrp.CFrame = CFrame.new(0, 10, 0)
     end)
 end
 
