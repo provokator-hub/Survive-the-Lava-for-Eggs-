@@ -17,7 +17,7 @@ local function safeTouch(a, b) if a and b then pcall(function() firetouchinteres
 
 local pg = player:WaitForChild("PlayerGui")
 
--- ГЛОБАЛЬНЫЙ ФАСТ Е (УБИРАЕТ ЗАДЕРЖКУ У ВСЕХ КНОПОК)
+-- ГЛОБАЛЬНЫЙ ФАСТ Е
 task.spawn(function()
     while scriptAlive do
         for _, obj in pairs(workspace:GetDescendants()) do
@@ -64,7 +64,7 @@ screenGui.Name = "Menu" screenGui.ResetOnSpawn = false screenGui.Parent = pg
 local hideBtn = Instance.new("TextButton") hideBtn.Size = UDim2.new(0, 44, 0, 44) hideBtn.Position = UDim2.new(0, 12, 0, 12) hideBtn.BackgroundColor3 = Color3.fromRGB(40, 15, 5) hideBtn.Text = "P" hideBtn.TextColor3 = Color3.fromRGB(255, 210, 140) hideBtn.Font = Enum.Font.GothamBold hideBtn.TextSize = 22 hideBtn.Parent = screenGui
 Instance.new("UICorner", hideBtn).CornerRadius = UDim.new(1, 0)
 
-local mainFrame = Instance.new("Frame") mainFrame.Size = UDim2.new(0, 300, 0, 500) mainFrame.Position = UDim2.new(0.5, -150, 0.5, -250) mainFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 22) mainFrame.Active = true mainFrame.Draggable = true mainFrame.Parent = screenGui
+local mainFrame = Instance.new("Frame") mainFrame.Size = UDim2.new(0, 300, 0, 550) mainFrame.Position = UDim2.new(0.5, -150, 0.5, -275) mainFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 22) mainFrame.Active = true mainFrame.Draggable = true mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 16)
 local ms = Instance.new("UIStroke") ms.Color = Color3.fromRGB(255, 120, 0) ms.Thickness = 1.5 ms.Transparency = 0.35 ms.Parent = mainFrame
 
@@ -152,6 +152,25 @@ farmBtn = makeBtn("🎃  ФАРМ ТЫКВ: ВЫКЛ", 114, 36, Color3.fromRGB(5
     isFarm = not isFarm farmBtn.Text = isFarm and "🎃  ФАРМ ТЫКВ: ВКЛ" or "🎃  ФАРМ ТЫКВ: ВЫКЛ" kills = 0
 end)
 
+-- ОБХОД VIP СТЕН
+local vipBypassBtn = makeBtn("🚪  ОБХОД VIP-СТЕН: ВЫКЛ", 158, 36, Color3.fromRGB(100, 50, 0), Color3.fromRGB(255, 230, 150), function()
+    local removed = 0
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name:lower():find("vip") or obj.Name:lower():find("barrier") or obj.Name:lower():find("gate") or obj.Name:lower():find("wall")) then
+            obj.Transparency = 1
+            obj.CanCollide = false
+            removed = removed + 1
+        end
+    end
+    if removed > 0 then
+        vipBypassBtn.Text = "🚪  VIP-СТЕНЫ УБРАНЫ (" .. removed .. ")"
+        vipBypassBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+    else
+        vipBypassBtn.Text = "🚪  VIP-СТЕН НЕ НАЙДЕНО"
+        vipBypassBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    end
+end)
+
 RunService.Heartbeat:Connect(function()
     if isFarm and tick() - lastFarm > 0.5 then
         lastFarm = tick() local c = player.Character
@@ -186,7 +205,7 @@ local cT = Instance.new("TextLabel") cT.Size = UDim2.new(1, 0, 0, 30) cT.Backgro
 local cC = Instance.new("TextButton") cC.Size = UDim2.new(0, 25, 0, 25) cC.Position = UDim2.new(1, -30, 0, 5) cC.BackgroundTransparency = 1 cC.Text = "X" cC.TextColor3 = Color3.fromRGB(255, 50, 50) cC.Font = Enum.Font.GothamBold cC.TextSize = 18 cC.Parent = countGui
 cC.MouseButton1Click:Connect(function() countGui.Visible = false end)
 
--- БЫСТРАЯ КРАЖА (0.15 СЕК)
+-- БЫСТРАЯ КРАЖА
 local function startSteal(num)
     countGui.Visible = false
     local c = player.Character if not c or not c:FindFirstChild("HumanoidRootPart") then return end
@@ -231,7 +250,7 @@ end
 local function makeLbl(t, y)
     local l = Instance.new("TextLabel") l.Size = UDim2.new(1, -32, 0, 18) l.Position = UDim2.new(0, 16, 0, y) l.BackgroundTransparency = 1 l.Text = t l.TextColor3 = Color3.fromRGB(255, 160, 80) l.Font = Enum.Font.GothamBold l.TextSize = 11 l.TextXAlignment = Enum.TextXAlignment.Left l.Parent = mainFrame
 end
-makeLbl("КРАЖА ЯИЦ", 164)
+makeLbl("КРАЖА ЯИЦ", 208)
 
 local zDefs = {
     {n = "Вулкан", c = Color3.fromRGB(200, 60, 0), a = 500, b = 800},
@@ -241,14 +260,14 @@ local zDefs = {
     {n = "Демон", c = Color3.fromRGB(150, 0, 0), a = 4000, b = 4600}
 }
 for i, z in ipairs(zDefs) do
-    makeBtn("🎯  КРАСТЬ: " .. z.n, 184 + (i - 1) * 34, 30, z.c, Color3.fromRGB(255, 255, 255), function()
+    makeBtn("🎯  КРАСТЬ: " .. z.n, 228 + (i - 1) * 34, 30, z.c, Color3.fromRGB(255, 255, 255), function()
         minX, maxX = z.a, z.b 
         countGui.Visible = true 
     end)
 end
 
-makeLbl("УПРАВЛЕНИЕ", 370)
-local unloadBtn = makeBtn("⛔  ВЫГРУЗИТЬ СКРИПТ", 390, 32, Color3.fromRGB(80, 15, 15), Color3.fromRGB(255, 180, 180), function()
+makeLbl("УПРАВЛЕНИЕ", 414)
+local unloadBtn = makeBtn("⛔  ВЫГРУЗИТЬ СКРИПТ", 434, 32, Color3.fromRGB(80, 15, 15), Color3.fromRGB(255, 180, 180), function()
     scriptAlive = false
     if flyConn then flyConn:Disconnect() end
     if screenGui then screenGui:Destroy() end
